@@ -1,0 +1,63 @@
+name: Windows CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+      - name: Check release tag and version
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          . ./scripts/version.ps1
+          if ($env:RELEASE_TAG -cne ('v' + (Get-OpenRevoVersion))) {
+            throw 'Release tag must match Directory.Build.props.'
+          }
+          if (!(Test-Path -LiteralPath "docs/releases/$($env:RELEASE_TAG).md")) {
+            throw 'Release notes are missing.'
+          }
+      - name: Test protocol and state model (no hardware access)
+        run: ./scripts/test.ps1
+      - name: Build diagnostic CLI
+        run: dotnet build src/OpenRevo.Probe/OpenRevo.Probe.csproj -c Release -p:RestoreLockedMode=true --nologo
+      - name: Build and package WinUI app
+        run: ./scripts/build.ps1 -Publish
+      - name: Verify portable archive
+        run: ./scripts/verify-portable.ps1
+      - name: Preserve portable package
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: OpenRevo-windows-x64
+          path: |
+            artifacts/*.zip
+            artifacts/SHA256SUMS.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+      - name: Preserve validation logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: validation-logs
+          path: .local/validation/
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 14

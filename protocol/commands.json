@@ -1,0 +1,96 @@
+{
+  "status": "static-sender-confirmed; not an executable allowlist",
+  "transport_implemented": false,
+  "commands": [
+    {
+      "topic": "Customize/SupportControl",
+      "payload": {
+        "Action": "GETSUPPORT"
+      },
+      "meaning": "查询能力（厂商发送端意图）",
+      "query_intent": true,
+      "sender_evidence": {
+        "path": ".local/decompiled/Tray/SystrayComponent/SystrayApplicationContext.cs",
+        "line": 152
+      },
+      "handler_semantics": "unrecovered-runtime-protected",
+      "live_verified": false,
+      "enabled": false
+    },
+    {
+      "topic": "Fan/Control",
+      "payload": {
+        "Action": "GETSTATUS"
+      },
+      "meaning": "查询状态（厂商发送端意图）",
+      "query_intent": true,
+      "sender_evidence": {
+        "path": ".local/decompiled/Tray/SystrayComponent/SystrayApplicationContext.cs",
+        "line": 160
+      },
+      "handler_semantics": "unrecovered-runtime-protected",
+      "live_verified": false,
+      "enabled": false
+    },
+    {
+      "topic": "Fan/Control",
+      "payload": {
+        "Action": "OPERATING_GAMING_MODE"
+      },
+      "meaning": "切换游戏模式",
+      "query_intent": false,
+      "sender_evidence": {
+        "path": ".local/decompiled/Tray/SystrayComponent/SystrayApplicationContext.cs",
+        "line": 858
+      },
+      "handler_semantics": "unrecovered-runtime-protected",
+      "live_verified": false,
+      "enabled": false
+    },
+    {
+      "topic": "Fan/Control",
+      "payload": {
+        "Action": "OPERATING_OFFICE_MODE"
+      },
+      "meaning": "切换办公模式",
+      "query_intent": false,
+      "sender_evidence": {
+        "path": ".local/decompiled/Tray/SystrayComponent/SystrayApplicationContext.cs",
+        "line": 866
+      },
+      "handler_semantics": "unrecovered-runtime-protected",
+      "live_verified": false,
+      "enabled": false
+    },
+    {
+      "topic": "Fan/Control",
+      "payload": {
+        "Action": "OPERATING_TURBO_MODE"
+      },
+      "meaning": "切换狂暴模式",
+      "query_intent": false,
+      "sender_evidence": {
+        "path": ".local/decompiled/Tray/SystrayComponent/SystrayApplicationContext.cs",
+        "line": 874
+      },
+      "handler_semantics": "unrecovered-runtime-protected",
+      "live_verified": false,
+      "enabled": false
+    },
+    {
+      "topic": "Fan/Control",
+      "payload": {
+        "Action": "OPERATING_CUSTOM_MODE"
+      },
+      "meaning": "切换自定义模式",
+      "query_intent": false,
+      "sender_evidence": {
+        "path": ".local/decompiled/Tray/SystrayComponent/SystrayApplicationContext.cs",
+        "line": 882
+      },
+      "handler_semantics": "unrecovered-runtime-protected",
+      "live_verified": false,
+      "enabled": false
+    }
+  ]
+}

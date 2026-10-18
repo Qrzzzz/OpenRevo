@@ -1,0 +1,2714 @@
+{
+  "scope": "actual machine observations; no control-write acceptance",
+  "reports": [
+    {
+      "evidenceFile": ".local/evidence/live-observation.json",
+      "sha256": "e07db99ca09c0650658546fa997faeca4c6bf7a3568f0b04fcbec5eaa15e64f4",
+      "messageCount": 1,
+      "applicationQueriesSent": [],
+      "topics": {
+        "Customize/SupportInfo": {
+          "retainedCount": 1,
+          "nonRetainedCount": 0,
+          "fields": {
+            "CustomizeTarget": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "ProjectID": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "UninstallCalibration": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "ColorCalibration": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "ServiceReady": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "AcRecoverySwitchBiosSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "AcRecoverySwitchSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "ColorCalibrationSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "DGpuDirectConnectionSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "FanBoostBtnSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsAMDPlatform": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsNvGpu": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "LightbarSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "RGBLightbarSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsProjectIdCommercial": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsProjectIdCommercialHAVE20DB": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "FanSettingsSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "NumPadSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "OcSettingsSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "LiquidCoolingSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "LiquidCoolingAutoModeSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "RamFan1p5Support": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "SystemMonitorSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "TurboModeSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "TypeCSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsHeroProject": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsGamingMonitorSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "CPUPerformanceAndOverClockMenuSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "APVersionCheck": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "OTASupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsTurboSubModeSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "BIOS_PROJECT_ID": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "Language": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "LanguageList": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "AutoDetectSystemLang": {
+              "jsonTypes": [
+                "str"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "evidenceFile": ".local/evidence/queried-observation.json",
+      "sha256": "72382163dc897ebb960d30d7231e2178d392cf4b3c63bc9f9f9801dcfc3292e9",
+      "messageCount": 3,
+      "applicationQueriesSent": [
+        {
+          "topic": "Customize/SupportControl",
+          "payload": {
+            "Action": "GETSUPPORT"
+          },
+          "sentAtUtc": "2026-10-18T09:56:53.310557+00:00"
+        },
+        {
+          "topic": "Fan/Control",
+          "payload": {
+            "Action": "GETSTATUS"
+          },
+          "sentAtUtc": "2026-10-18T09:56:53.310584+00:00"
+        }
+      ],
+      "topics": {
+        "Customize/SupportInfo": {
+          "retainedCount": 1,
+          "nonRetainedCount": 1,
+          "fields": {
+            "CustomizeTarget": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "ProjectID": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "UninstallCalibration": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "ColorCalibration": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "ServiceReady": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "AcRecoverySwitchBiosSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "AcRecoverySwitchSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "ColorCalibrationSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "DGpuDirectConnectionSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "FanBoostBtnSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsAMDPlatform": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsNvGpu": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "LightbarSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "RGBLightbarSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsProjectIdCommercial": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsProjectIdCommercialHAVE20DB": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "FanSettingsSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "NumPadSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "OcSettingsSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "LiquidCoolingSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "LiquidCoolingAutoModeSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "RamFan1p5Support": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "SystemMonitorSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "TurboModeSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "TypeCSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsHeroProject": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsGamingMonitorSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "CPUPerformanceAndOverClockMenuSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "APVersionCheck": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "OTASupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsTurboSubModeSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "BIOS_PROJECT_ID": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "Language": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "LanguageList": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "AutoDetectSystemLang": {
+              "jsonTypes": [
+                "str"
+              ]
+            }
+          }
+        },
+        "Fan/Status": {
+          "retainedCount": 0,
+          "nonRetainedCount": 1,
+          "fields": {
+            "IsAC": {
+              "jsonTypes": [
+                "bool"
+              ]
+            },
+            "OverClockingSwitch": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "OperatingMode": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GamingProfileIndex": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "OfficeProfileIndex": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "TurboProfileIndex": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CustomProfileIndex": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "FanBoostEnable": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "ProfileName": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "FAN_FanSwitchSpeedEnabled": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "FAN_FanSwitchSpeed": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "FAN_TableName": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "FAN_SafetyProtectNotify": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "FAN_SafetyProtect": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL1": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL1Maximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL1Minimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL2": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL2Maximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL2Minimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL4": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL4Maximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL4Minimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_OffsetCoreVoltage": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_OffsetCoreVoltageOC": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_OffsetCoreVoltageMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_OffsetCoreVoltageMinimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_OffsetCoreVoltageSupport": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_TccOffsetSwitch": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_TccOffsetMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_TccOffset": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_CoreClockOffset": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_CoreClockOffsetOC": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_CoreClockOffsetMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_CoreClockOffsetMaximumHWOC": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_CoreClockOffsetMinimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_MemoryClockOffset": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_MemoryClockOffsetOC": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_MemoryClockOffsetMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_MemoryClockOffsetMaximumHWOC": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_MemoryClockOffsetMinimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_MemoryClockOffsetMinimumHWOC": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_TargetTemperature": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_TargetTemperatureMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_TargetTemperatureMinimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_ConfigurableTGPSwitch": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_ConfigurableTGPTarget": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_ConfigurableTGPMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_ConfigurableTGPMinimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_DynamicBoostSwitch": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CustomTGPinGCUforGN21_Value": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CustomTGPinGCUforGN21_Enable": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PerformanceAndOverClockMenuSwitch": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_DynamicBoost": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_DynamicBoostMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_DynamicBoostMinimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_DynamicBoostTotalProcessingPowerTarget": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_WhisperModeSupport": {
+              "jsonTypes": [
+                "bool"
+              ]
+            },
+            "GPU_WhisperModeSwitch": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_WhisperModeSetting": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_WhisperModeMinFps_QUIETER": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_WhisperModeMinFps_QUIET": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_WhisperModeMinFps_BALANCED": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_WhisperModeMinFpsMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_WhisperModeMinFpsMinimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdSPL": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdSPPT": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdFPPT": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdTccTarget": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdOverClockSupport": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdCoreFreq": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdCoreFreqOC": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdCoreFreqMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdCoreVoltage": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdCoreVoltageOC": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdCoreVoltageMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "MEM_MemoryOverClockSupport": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "MEM_MemoryOverClockSwitch": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "BSOD_DefaultNotify": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "BSOD_TimestampRestored": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "OcSupport": {
+              "jsonTypes": [
+                "bool"
+              ]
+            },
+            "IsAMDPlatform": {
+              "jsonTypes": [
+                "bool"
+              ]
+            },
+            "IsNvGpu": {
+              "jsonTypes": [
+                "bool"
+              ]
+            },
+            "TurboModeOption": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "FanBoostBtnSupport": {
+              "jsonTypes": [
+                "bool"
+              ]
+            },
+            "PowerMode": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL4_Double_Flag": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "TjMax": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "Extreme": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "Silent": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "TurboGPUOCEnabled": {
+              "jsonTypes": [
+                "bool"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "evidenceFile": ".local/evidence/vendor-ui-observation.json",
+      "sha256": "698bb5949d0bdba058f90ef8d885d1f57ba6e0223ef5bc177cca4e2f8ed61e8f",
+      "messageCount": 40,
+      "applicationQueriesSent": [],
+      "topics": {
+        "Customize/SupportInfo": {
+          "retainedCount": 1,
+          "nonRetainedCount": 0,
+          "fields": {
+            "CustomizeTarget": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "ProjectID": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "UninstallCalibration": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "ColorCalibration": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "ServiceReady": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "AcRecoverySwitchBiosSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "AcRecoverySwitchSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "ColorCalibrationSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "DGpuDirectConnectionSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "FanBoostBtnSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsAMDPlatform": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsNvGpu": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "LightbarSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "RGBLightbarSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsProjectIdCommercial": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsProjectIdCommercialHAVE20DB": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "FanSettingsSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "NumPadSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "OcSettingsSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "LiquidCoolingSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "LiquidCoolingAutoModeSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "RamFan1p5Support": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "SystemMonitorSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "TurboModeSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "TypeCSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsHeroProject": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsGamingMonitorSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "CPUPerformanceAndOverClockMenuSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "APVersionCheck": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "OTASupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsTurboSubModeSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "BIOS_PROJECT_ID": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "Language": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "LanguageList": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "AutoDetectSystemLang": {
+              "jsonTypes": [
+                "str"
+              ]
+            }
+          }
+        },
+        "System/Control": {
+          "retainedCount": 0,
+          "nonRetainedCount": 4,
+          "fields": {
+            "Action": {
+              "jsonTypes": [
+                "str"
+              ]
+            }
+          }
+        },
+        "System/BatteryInfo": {
+          "retainedCount": 0,
+          "nonRetainedCount": 2,
+          "fields": {
+            "BatteryLifePercent": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "BatteryLifeRemaining": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "BatteryAbnormal": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "BatteryCapacity": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "BatteryCycleCount": {
+              "jsonTypes": [
+                "str"
+              ]
+            }
+          }
+        },
+        "System/GpuInfo": {
+          "retainedCount": 0,
+          "nonRetainedCount": 1,
+          "fields": {
+            "GpuUsage": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GpuTemperature": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GpuCoreFreq": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GpuMemFreq": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GpuPState": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GpuMem": {
+              "jsonTypes": [
+                "str"
+              ]
+            }
+          }
+        },
+        "System/CpuInfo": {
+          "retainedCount": 0,
+          "nonRetainedCount": 16,
+          "fields": {
+            "CpuUsage": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CpuTemperature": {
+              "jsonTypes": [
+                "str"
+              ]
+            }
+          }
+        },
+        "System/FanInfo": {
+          "retainedCount": 0,
+          "nonRetainedCount": 16,
+          "fields": {
+            "CpuFanDuty": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "GpuFanDuty": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "CpuFanRpm": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "GpuFanRpm": {
+              "jsonTypes": [
+                "int"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "evidenceFile": ".local/evidence/independent-monitor-observation.json",
+      "sha256": "ae73a35a41cef38bb68fe2713b49acaea58563599aca17eb55a43dbbdb732508",
+      "messageCount": 17,
+      "applicationQueriesSent": [
+        {
+          "topic": "Customize/SupportControl",
+          "payload": {
+            "Action": "GETSUPPORT"
+          },
+          "sentAtUtc": "2026-10-18T10:01:08.288880+00:00"
+        },
+        {
+          "topic": "Fan/Control",
+          "payload": {
+            "Action": "GETSTATUS"
+          },
+          "sentAtUtc": "2026-10-18T10:01:08.288911+00:00"
+        },
+        {
+          "topic": "System/Control",
+          "payload": {
+            "Action": "System_ON"
+          },
+          "sentAtUtc": "2026-10-18T10:01:08.288927+00:00"
+        }
+      ],
+      "topics": {
+        "Customize/SupportInfo": {
+          "retainedCount": 1,
+          "nonRetainedCount": 1,
+          "fields": {
+            "CustomizeTarget": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "ProjectID": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "UninstallCalibration": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "ColorCalibration": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "ServiceReady": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "AcRecoverySwitchBiosSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "AcRecoverySwitchSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "ColorCalibrationSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "DGpuDirectConnectionSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "FanBoostBtnSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsAMDPlatform": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsNvGpu": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "LightbarSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "RGBLightbarSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsProjectIdCommercial": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsProjectIdCommercialHAVE20DB": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "FanSettingsSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "NumPadSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "OcSettingsSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "LiquidCoolingSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "LiquidCoolingAutoModeSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "RamFan1p5Support": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "SystemMonitorSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "TurboModeSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "TypeCSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsHeroProject": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsGamingMonitorSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "CPUPerformanceAndOverClockMenuSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "APVersionCheck": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "OTASupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsTurboSubModeSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "BIOS_PROJECT_ID": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "Language": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "LanguageList": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "AutoDetectSystemLang": {
+              "jsonTypes": [
+                "str"
+              ]
+            }
+          }
+        },
+        "Fan/Status": {
+          "retainedCount": 0,
+          "nonRetainedCount": 1,
+          "fields": {
+            "IsAC": {
+              "jsonTypes": [
+                "bool"
+              ]
+            },
+            "OverClockingSwitch": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "OperatingMode": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GamingProfileIndex": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "OfficeProfileIndex": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "TurboProfileIndex": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CustomProfileIndex": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "FanBoostEnable": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "ProfileName": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "FAN_FanSwitchSpeedEnabled": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "FAN_FanSwitchSpeed": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "FAN_TableName": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "FAN_SafetyProtectNotify": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "FAN_SafetyProtect": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL1": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL1Maximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL1Minimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL2": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL2Maximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL2Minimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL4": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL4Maximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL4Minimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_OffsetCoreVoltage": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_OffsetCoreVoltageOC": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_OffsetCoreVoltageMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_OffsetCoreVoltageMinimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_OffsetCoreVoltageSupport": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_TccOffsetSwitch": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_TccOffsetMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_TccOffset": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_CoreClockOffset": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_CoreClockOffsetOC": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_CoreClockOffsetMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_CoreClockOffsetMaximumHWOC": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_CoreClockOffsetMinimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_MemoryClockOffset": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_MemoryClockOffsetOC": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_MemoryClockOffsetMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_MemoryClockOffsetMaximumHWOC": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_MemoryClockOffsetMinimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_MemoryClockOffsetMinimumHWOC": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_TargetTemperature": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_TargetTemperatureMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_TargetTemperatureMinimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_ConfigurableTGPSwitch": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_ConfigurableTGPTarget": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_ConfigurableTGPMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_ConfigurableTGPMinimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_DynamicBoostSwitch": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CustomTGPinGCUforGN21_Value": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CustomTGPinGCUforGN21_Enable": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PerformanceAndOverClockMenuSwitch": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_DynamicBoost": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_DynamicBoostMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_DynamicBoostMinimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_DynamicBoostTotalProcessingPowerTarget": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_WhisperModeSupport": {
+              "jsonTypes": [
+                "bool"
+              ]
+            },
+            "GPU_WhisperModeSwitch": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_WhisperModeSetting": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_WhisperModeMinFps_QUIETER": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_WhisperModeMinFps_QUIET": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_WhisperModeMinFps_BALANCED": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_WhisperModeMinFpsMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_WhisperModeMinFpsMinimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdSPL": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdSPPT": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdFPPT": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdTccTarget": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdOverClockSupport": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdCoreFreq": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdCoreFreqOC": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdCoreFreqMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdCoreVoltage": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdCoreVoltageOC": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdCoreVoltageMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "MEM_MemoryOverClockSupport": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "MEM_MemoryOverClockSwitch": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "BSOD_DefaultNotify": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "BSOD_TimestampRestored": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "OcSupport": {
+              "jsonTypes": [
+                "bool"
+              ]
+            },
+            "IsAMDPlatform": {
+              "jsonTypes": [
+                "bool"
+              ]
+            },
+            "IsNvGpu": {
+              "jsonTypes": [
+                "bool"
+              ]
+            },
+            "TurboModeOption": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "FanBoostBtnSupport": {
+              "jsonTypes": [
+                "bool"
+              ]
+            },
+            "PowerMode": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL4_Double_Flag": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "TjMax": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "Extreme": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "Silent": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "TurboGPUOCEnabled": {
+              "jsonTypes": [
+                "bool"
+              ]
+            }
+          }
+        },
+        "System/BatteryInfo": {
+          "retainedCount": 0,
+          "nonRetainedCount": 1,
+          "fields": {
+            "BatteryLifePercent": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "BatteryLifeRemaining": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "BatteryAbnormal": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "BatteryCapacity": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "BatteryCycleCount": {
+              "jsonTypes": [
+                "str"
+              ]
+            }
+          }
+        },
+        "System/GpuInfo": {
+          "retainedCount": 0,
+          "nonRetainedCount": 1,
+          "fields": {
+            "GpuUsage": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GpuTemperature": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GpuCoreFreq": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GpuMemFreq": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GpuPState": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GpuMem": {
+              "jsonTypes": [
+                "str"
+              ]
+            }
+          }
+        },
+        "System/CpuInfo": {
+          "retainedCount": 0,
+          "nonRetainedCount": 6,
+          "fields": {
+            "CpuUsage": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CpuTemperature": {
+              "jsonTypes": [
+                "str"
+              ]
+            }
+          }
+        },
+        "System/FanInfo": {
+          "retainedCount": 0,
+          "nonRetainedCount": 6,
+          "fields": {
+            "CpuFanDuty": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "GpuFanDuty": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "CpuFanRpm": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "GpuFanRpm": {
+              "jsonTypes": [
+                "int"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "evidenceFile": ".local/evidence/csharp-observation.json",
+      "sha256": "1322709ad4b3b510f6b8a8c4dbba224dbea14f4cdec96da3001db42ecd0b0d02",
+      "messageCount": 24,
+      "applicationQueriesSent": [
+        {
+          "topic": "Customize/SupportControl",
+          "payload": {
+            "Action": "GETSUPPORT"
+          },
+          "sentAtUtc": "2026-10-18T10:05:34.4284822+00:00"
+        },
+        {
+          "topic": "Fan/Control",
+          "payload": {
+            "Action": "GETSTATUS"
+          },
+          "sentAtUtc": "2026-10-18T10:05:34.4286104+00:00"
+        },
+        {
+          "topic": "System/Control",
+          "payload": {
+            "Action": "System_ON"
+          },
+          "sentAtUtc": "2026-10-18T10:05:34.4338457+00:00"
+        },
+        {
+          "topic": "Customize/SupportControl",
+          "payload": {
+            "Action": "GETSUPPORT"
+          },
+          "sentAtUtc": "2026-10-18T10:05:49.5759734+00:00"
+        },
+        {
+          "topic": "Fan/Control",
+          "payload": {
+            "Action": "GETSTATUS"
+          },
+          "sentAtUtc": "2026-10-18T10:05:49.5760031+00:00"
+        }
+      ],
+      "topics": {
+        "Customize/SupportInfo": {
+          "retainedCount": 1,
+          "nonRetainedCount": 2,
+          "fields": {
+            "CustomizeTarget": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "ProjectID": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "UninstallCalibration": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "ColorCalibration": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "ServiceReady": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "AcRecoverySwitchBiosSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "AcRecoverySwitchSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "ColorCalibrationSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "DGpuDirectConnectionSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "FanBoostBtnSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsAMDPlatform": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsNvGpu": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "LightbarSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "RGBLightbarSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsProjectIdCommercial": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsProjectIdCommercialHAVE20DB": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "FanSettingsSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "NumPadSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "OcSettingsSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "LiquidCoolingSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "LiquidCoolingAutoModeSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "RamFan1p5Support": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "SystemMonitorSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "TurboModeSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "TypeCSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsHeroProject": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsGamingMonitorSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "CPUPerformanceAndOverClockMenuSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "APVersionCheck": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "OTASupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "IsTurboSubModeSupport": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "BIOS_PROJECT_ID": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "Language": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "LanguageList": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "AutoDetectSystemLang": {
+              "jsonTypes": [
+                "str"
+              ]
+            }
+          }
+        },
+        "Fan/Status": {
+          "retainedCount": 0,
+          "nonRetainedCount": 2,
+          "fields": {
+            "IsAC": {
+              "jsonTypes": [
+                "bool"
+              ]
+            },
+            "OverClockingSwitch": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "OperatingMode": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GamingProfileIndex": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "OfficeProfileIndex": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "TurboProfileIndex": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CustomProfileIndex": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "FanBoostEnable": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "ProfileName": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "FAN_FanSwitchSpeedEnabled": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "FAN_FanSwitchSpeed": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "FAN_TableName": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "FAN_SafetyProtectNotify": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "FAN_SafetyProtect": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL1": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL1Maximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL1Minimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL2": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL2Maximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL2Minimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL4": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL4Maximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL4Minimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_OffsetCoreVoltage": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_OffsetCoreVoltageOC": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_OffsetCoreVoltageMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_OffsetCoreVoltageMinimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_OffsetCoreVoltageSupport": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_TccOffsetSwitch": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_TccOffsetMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_TccOffset": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_CoreClockOffset": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_CoreClockOffsetOC": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_CoreClockOffsetMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_CoreClockOffsetMaximumHWOC": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_CoreClockOffsetMinimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_MemoryClockOffset": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_MemoryClockOffsetOC": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_MemoryClockOffsetMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_MemoryClockOffsetMaximumHWOC": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_MemoryClockOffsetMinimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_MemoryClockOffsetMinimumHWOC": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_TargetTemperature": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_TargetTemperatureMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_TargetTemperatureMinimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_ConfigurableTGPSwitch": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_ConfigurableTGPTarget": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_ConfigurableTGPMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_ConfigurableTGPMinimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_DynamicBoostSwitch": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CustomTGPinGCUforGN21_Value": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CustomTGPinGCUforGN21_Enable": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PerformanceAndOverClockMenuSwitch": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_DynamicBoost": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_DynamicBoostMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_DynamicBoostMinimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_DynamicBoostTotalProcessingPowerTarget": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_WhisperModeSupport": {
+              "jsonTypes": [
+                "bool"
+              ]
+            },
+            "GPU_WhisperModeSwitch": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_WhisperModeSetting": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_WhisperModeMinFps_QUIETER": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_WhisperModeMinFps_QUIET": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_WhisperModeMinFps_BALANCED": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_WhisperModeMinFpsMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "GPU_WhisperModeMinFpsMinimum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdSPL": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdSPPT": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdFPPT": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdTccTarget": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdOverClockSupport": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdCoreFreq": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdCoreFreqOC": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdCoreFreqMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdCoreVoltage": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdCoreVoltageOC": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_AmdCoreVoltageMaximum": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "MEM_MemoryOverClockSupport": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "MEM_MemoryOverClockSwitch": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "BSOD_DefaultNotify": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "BSOD_TimestampRestored": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "OcSupport": {
+              "jsonTypes": [
+                "bool"
+              ]
+            },
+            "IsAMDPlatform": {
+              "jsonTypes": [
+                "bool"
+              ]
+            },
+            "IsNvGpu": {
+              "jsonTypes": [
+                "bool"
+              ]
+            },
+            "TurboModeOption": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "FanBoostBtnSupport": {
+              "jsonTypes": [
+                "bool"
+              ]
+            },
+            "PowerMode": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CPU_PL4_Double_Flag": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "TjMax": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "Extreme": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "Silent": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "TurboGPUOCEnabled": {
+              "jsonTypes": [
+                "bool"
+              ]
+            }
+          }
+        },
+        "System/BatteryInfo": {
+          "retainedCount": 0,
+          "nonRetainedCount": 1,
+          "fields": {
+            "BatteryLifePercent": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "BatteryLifeRemaining": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "BatteryAbnormal": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "BatteryCapacity": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "BatteryCycleCount": {
+              "jsonTypes": [
+                "str"
+              ]
+            }
+          }
+        },
+        "System/CpuInfo": {
+          "retainedCount": 0,
+          "nonRetainedCount": 9,
+          "fields": {
+            "CpuUsage": {
+              "jsonTypes": [
+                "str"
+              ]
+            },
+            "CpuTemperature": {
+              "jsonTypes": [
+                "str"
+              ]
+            }
+          }
+        },
+        "System/FanInfo": {
+          "retainedCount": 0,
+          "nonRetainedCount": 9,
+          "fields": {
+            "CpuFanDuty": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "GpuFanDuty": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "CpuFanRpm": {
+              "jsonTypes": [
+                "int"
+              ]
+            },
+            "GpuFanRpm": {
+              "jsonTypes": [
+                "int"
+              ]
+            }
+          }
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "No hardware write tested or implemented",
+    "Retained data is not current-state proof",
+    "Telemetry timers are shared; System_OFF is never sent",
+    "Some fields are absent or unchanged between pushes; no fabricated fallback values"
+  ]
+}

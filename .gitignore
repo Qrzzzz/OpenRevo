@@ -1,0 +1,9 @@
+.local/
+__pycache__/
+**/bin/
+**/obj/
+artifacts/
+.vs/
+*.user
+.env
+.env.*

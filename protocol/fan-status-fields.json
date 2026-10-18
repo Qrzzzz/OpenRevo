@@ -1,0 +1,605 @@
+{
+  "status": "vendor client model; not complete live response schema",
+  "fields": [
+    {
+      "type": "string",
+      "name": "OperatingMode",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 5
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "GamingProfileIndex",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 7
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "OfficeProfileIndex",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 9
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "TurboProfileIndex",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 11
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "FanBoostEnable",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 13
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "FAN_FanSwitchSpeedEnabled",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 15
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "FAN_FanSwitchSpeed",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 17
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "FAN_SafetyProtectNotify",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 19
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "FAN_SafetyProtect",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 21
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "CPU_PL1",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 23
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "CPU_PL1Maximum",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 25
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "CPU_PL2",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 27
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "CPU_PL2Maximum",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 29
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "CPU_PL4",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 31
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "CPU_PL4Maximum",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 33
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "CPU_CoreVoltage",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 35
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "CPU_CoreVoltageMaximum",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 37
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "CPU_OffsetCoreVoltage",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 39
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "CPU_OffsetCoreVoltageMaximum",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 41
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "CPU_TccOffsetSwitch",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 43
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "CPU_TccOffsetMaximum",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 45
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "CPU_TccOffset",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 47
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "CPU_OfficePowerSettingMode",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 49
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "GPU_CoreClockOffset",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 51
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "GPU_CoreClockOffsetMaximum",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 53
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "GPU_MemoryClockOffset",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 55
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "GPU_MemoryClockOffsetMaximum",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 57
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "GPU_TargetTemperature",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 59
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "GPU_TargetTemperatureMaximum",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 61
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "GPU_TargetTemperatureMinimum",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 63
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "GPU_ConfigurableTGPSwitch",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 65
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "GPU_ConfigurableTGPTarget",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 67
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "GPU_ConfigurableTGPMaximum",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 69
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "GPU_ConfigurableTGPMinimum",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 71
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "GPU_DynamicBoostSwitch",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 73
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "GPU_DynamicBoost",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 75
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "GPU_DynamicBoostMaximum",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 77
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "GPU_DynamicBoostMinimum",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 79
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "bool",
+      "name": "GPU_WhisperModeSupport",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 81
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "GPU_WhisperModeSwitch",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 83
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "GPU_WhisperModeSetting",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 85
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "GPU_WhisperModeMinFps_QUIETER",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 87
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "GPU_WhisperModeMinFps_QUIET",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 89
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "GPU_WhisperModeMinFps_BALANCED",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 91
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "GPU_WhisperModeMinFpsMaximum",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 93
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "GPU_WhisperModeMinFpsMinimum",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 95
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "CPU_AmdSPL",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 97
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "CPU_AmdSPPT",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 99
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "CPU_AmdFPPT",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 101
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "Cpu_AmdTccTarget",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 103
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "CPU_AmdOverClockSupport",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 105
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "CPU_AmdCoreFreq",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 107
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "CPU_AmdCoreFreqMaximum",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 109
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "CPU_AmdCoreVoltage",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 111
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "CPU_AmdCoreVoltageMaximum",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 113
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "MEM_MemoryOverClockSwitch",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 115
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "BSOD_DefaultNotify",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 117
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "BSOD_TimestampRestored",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 119
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "MEM_MemoryOverClockSupport",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 121
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    },
+    {
+      "type": "string",
+      "name": "PowerMode",
+      "source": {
+        "path": ".local/decompiled/Tray/SystrayComponent/MyRamFan1p5.cs",
+        "line": 123
+      },
+      "live_observed": false,
+      "units_and_valid_ranges": null
+    }
+  ]
+}

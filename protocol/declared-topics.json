@@ -1,0 +1,425 @@
+{
+  "status": "static-only",
+  "topics": [
+    {
+      "symbol": "SupportControl",
+      "topic": "Customize/SupportControl",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 5
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "SupportInfo",
+      "topic": "Customize/SupportInfo",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 7
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "BatteryProtection_Control",
+      "topic": "BatteryProtection/Control",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 9
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "System_Control",
+      "topic": "System/Control",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 11
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "System_FanErrorInfo",
+      "topic": "System/FanErrorInfo",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 13
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "System_FanInfo",
+      "topic": "System/FanInfo",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 15
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "System_BatteryInfo",
+      "topic": "System/BatteryInfo",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 17
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "System_CpuInfo",
+      "topic": "System/CpuInfo",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 19
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "System_StaticsData",
+      "topic": "System/StaticsData",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 21
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "System_MemoryInfo",
+      "topic": "System/MemoryInfo",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 23
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "System_GpuInfo",
+      "topic": "System/GpuInfo",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 25
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "System_NetworkInfo",
+      "topic": "System/NetworkInfo",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 27
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "System_DiskInfo",
+      "topic": "System/DiskInfo",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 29
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "System_HardwareInfo",
+      "topic": "System/HardwareInfo",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 31
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "System_HwFuelGauge",
+      "topic": "System/HwFuelGauge",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 33
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "Fan_Control",
+      "topic": "Fan/Control",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 35
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "Fan_Status",
+      "topic": "Fan/Status",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 37
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "RGBLB_Control",
+      "topic": "MyRgbLightbar/Control",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 39
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "RGBLB_Status",
+      "topic": "MyRgbLightbar/Status",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 41
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "Setting_Control",
+      "topic": "Setting/Control",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 43
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "Setting_Status",
+      "topic": "Setting/Status",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 45
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "EC_Control",
+      "topic": "EC/Control",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 47
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "EC_Status",
+      "topic": "EC/Status",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 49
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "RGBKeyboard_Control",
+      "topic": "Keyboard/Ctrl",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 51
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "RGBKeyboard_Status",
+      "topic": "Keyboard/Status",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 53
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "RGBKeyboardSingleZone_Control",
+      "topic": "KeyboardSingleZone/Ctrl",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 55
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "RGBKeyboardSingleZone_Status",
+      "topic": "KeyboardSingleZone/Status",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 57
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "HIDRGBLightbar_Control",
+      "topic": "HidLightbar/Ctrl",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 59
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "HIDRGBLightbar_Status",
+      "topic": "HidLightbar/Status",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 61
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "Service_Close",
+      "topic": "Service/Close",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 63
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "Customize_Control",
+      "topic": "Customize/Control",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 65
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "Customize_Info",
+      "topic": "Customize/Info",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 67
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "Languages_Info",
+      "topic": "Languages/Info",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 69
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "Languages_Control",
+      "topic": "Languages/Control",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 71
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "Openvino_Control",
+      "topic": "Openvino/Control",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 73
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "OSDTpDectect_Language",
+      "topic": "OSDTpDectect/Language",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 75
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "OSDTpDectect_Control",
+      "topic": "OSDTpDectect/Control",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 77
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "OSD_Status",
+      "topic": "OSD/Status",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 79
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "Tray_Status",
+      "topic": "Tray/Status",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 81
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "Display_Satus",
+      "topic": "Display/Status",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 83
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "TouchPadWorkArea_Satus",
+      "topic": "TouchPadWorkArea/Status",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 85
+      },
+      "live_verified": false
+    },
+    {
+      "symbol": "KeyboardManager_Satus",
+      "topic": "KeyboardManager/EnableStatus",
+      "evidence": "decompiled-constant-only",
+      "source": {
+        "path": ".local/decompiled/Tray/UWP_Refactor.DataService/Topic.cs",
+        "line": 87
+      },
+      "live_verified": false
+    }
+  ]
+}

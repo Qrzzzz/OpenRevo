@@ -1,0 +1,252 @@
+{
+  "status": "static-cross-checked; payload ABI and driver handlers incomplete",
+  "exports": [
+    {
+      "export": "ReadCMOS",
+      "export_rva": "0x3250",
+      "ioctl": "0x9c40a480",
+      "managed_constant": "IOCTL_GPD_ACPI_CMREAD",
+      "evidence": [
+        "native-export-disassembly",
+        "managed-constant"
+      ],
+      "driver_handler_verified": false,
+      "live_verified": false,
+      "enabled": false
+    },
+    {
+      "export": "WriteCMOS",
+      "export_rva": "0x3330",
+      "ioctl": "0x9c40a484",
+      "managed_constant": "IOCTL_GPD_ACPI_CMWRITE",
+      "evidence": [
+        "native-export-disassembly",
+        "managed-constant"
+      ],
+      "driver_handler_verified": false,
+      "live_verified": false,
+      "enabled": false
+    },
+    {
+      "export": "ReadEC",
+      "export_rva": "0x3410",
+      "ioctl": "0x9c40a488",
+      "managed_constant": "IOCTL_GPD_ACPI_ECREAD",
+      "evidence": [
+        "native-export-disassembly",
+        "managed-constant"
+      ],
+      "driver_handler_verified": false,
+      "live_verified": false,
+      "enabled": false
+    },
+    {
+      "export": "WriteEC",
+      "export_rva": "0x34f0",
+      "ioctl": "0x9c40a48c",
+      "managed_constant": "IOCTL_GPD_ACPI_ECWRITE",
+      "evidence": [
+        "native-export-disassembly",
+        "managed-constant"
+      ],
+      "driver_handler_verified": false,
+      "live_verified": false,
+      "enabled": false
+    },
+    {
+      "export": "ReadMEMB",
+      "export_rva": "0x35d0",
+      "ioctl": "0x9c40a490",
+      "managed_constant": "IOCTL_GPD_ACPI_MMREADB",
+      "evidence": [
+        "native-export-disassembly",
+        "managed-constant"
+      ],
+      "driver_handler_verified": false,
+      "live_verified": false,
+      "enabled": false
+    },
+    {
+      "export": "WriteMEMB",
+      "export_rva": "0x36b0",
+      "ioctl": "0x9c40a498",
+      "managed_constant": "IOCTL_GPD_ACPI_MMWRITEB",
+      "evidence": [
+        "native-export-disassembly",
+        "managed-constant"
+      ],
+      "driver_handler_verified": false,
+      "live_verified": false,
+      "enabled": false
+    },
+    {
+      "export": "ReadPCI",
+      "export_rva": "0x3790",
+      "ioctl": "0x9c40a4a0",
+      "managed_constant": "IOCTL_GPD_ACPI_PEREAD",
+      "evidence": [
+        "native-export-disassembly",
+        "managed-constant"
+      ],
+      "driver_handler_verified": false,
+      "live_verified": false,
+      "enabled": false
+    },
+    {
+      "export": "WritePCI",
+      "export_rva": "0x3870",
+      "ioctl": "0x9c40a4a4",
+      "managed_constant": "IOCTL_GPD_ACPI_PEWRITE",
+      "evidence": [
+        "native-export-disassembly",
+        "managed-constant"
+      ],
+      "driver_handler_verified": false,
+      "live_verified": false,
+      "enabled": false
+    },
+    {
+      "export": "ReadIO",
+      "export_rva": "0x3950",
+      "ioctl": "0x9c40a4c0",
+      "managed_constant": "IOCTL_GPD_ACPI_IOREAD",
+      "evidence": [
+        "native-export-disassembly",
+        "managed-constant"
+      ],
+      "driver_handler_verified": false,
+      "live_verified": false,
+      "enabled": false
+    },
+    {
+      "export": "WriteIO",
+      "export_rva": "0x3a30",
+      "ioctl": "0x9c40a4c4",
+      "managed_constant": "IOCTL_GPD_ACPI_IOWRITE",
+      "evidence": [
+        "native-export-disassembly",
+        "managed-constant"
+      ],
+      "driver_handler_verified": false,
+      "live_verified": false,
+      "enabled": false
+    },
+    {
+      "export": "ReadIndexIO",
+      "export_rva": "0x3b10",
+      "ioctl": "0x9c40a4c8",
+      "managed_constant": "IOCTL_GPD_ACPI_INIOREAD",
+      "evidence": [
+        "native-export-disassembly",
+        "managed-constant"
+      ],
+      "driver_handler_verified": false,
+      "live_verified": false,
+      "enabled": false
+    },
+    {
+      "export": "WriteIndexIO",
+      "export_rva": "0x3bf0",
+      "ioctl": "0x9c40a4cc",
+      "managed_constant": "IOCTL_GPD_ACPI_INIOWRITE",
+      "evidence": [
+        "native-export-disassembly",
+        "managed-constant"
+      ],
+      "driver_handler_verified": false,
+      "live_verified": false,
+      "enabled": false
+    },
+    {
+      "export": "TempRead1",
+      "export_rva": "0x3ce0",
+      "ioctl": "0x9c40a4d0",
+      "managed_constant": "IOCTL_GPD_ACPI_TMPREAD1",
+      "evidence": [
+        "native-export-disassembly",
+        "managed-constant"
+      ],
+      "driver_handler_verified": false,
+      "live_verified": false,
+      "enabled": false
+    },
+    {
+      "export": "TempRead2",
+      "export_rva": "0x3dc0",
+      "ioctl": "0x9c40a4d4",
+      "managed_constant": "IOCTL_GPD_ACPI_TMPREAD2",
+      "evidence": [
+        "native-export-disassembly",
+        "managed-constant"
+      ],
+      "driver_handler_verified": false,
+      "live_verified": false,
+      "enabled": false
+    },
+    {
+      "export": "TempRead3",
+      "export_rva": "0x3ea0",
+      "ioctl": "0x9c40a4d8",
+      "managed_constant": "IOCTL_GPD_ACPI_TMPREAD3",
+      "evidence": [
+        "native-export-disassembly",
+        "managed-constant"
+      ],
+      "driver_handler_verified": false,
+      "live_verified": false,
+      "enabled": false
+    },
+    {
+      "export": "TempWrite1",
+      "export_rva": "0x3f80",
+      "ioctl": "0x9c40a4dc",
+      "managed_constant": "IOCTL_GPD_ACPI_TMPWRITE1",
+      "evidence": [
+        "native-export-disassembly",
+        "managed-constant"
+      ],
+      "driver_handler_verified": false,
+      "live_verified": false,
+      "enabled": false
+    },
+    {
+      "export": "TempWrite2",
+      "export_rva": "0x4070",
+      "ioctl": "0x9c40a4e0",
+      "managed_constant": "IOCTL_GPD_ACPI_TMPWRITE2",
+      "evidence": [
+        "native-export-disassembly",
+        "managed-constant"
+      ],
+      "driver_handler_verified": false,
+      "live_verified": false,
+      "enabled": false
+    },
+    {
+      "export": "TempWrite3",
+      "export_rva": "0x4160",
+      "ioctl": "0x9c40a4e4",
+      "managed_constant": "IOCTL_GPD_ACPI_TMPWRITE3",
+      "evidence": [
+        "native-export-disassembly",
+        "managed-constant"
+      ],
+      "driver_handler_verified": false,
+      "live_verified": false,
+      "enabled": false
+    },
+    {
+      "export": "SMAPCTable",
+      "export_rva": "0x4230",
+      "ioctl": "0x9c40a500",
+      "managed_constant": "IOCTL_GPD_ACPI_SMAPCTABLE",
+      "evidence": [
+        "native-export-disassembly",
+        "managed-constant"
+      ],
+      "driver_handler_verified": false,
+      "live_verified": false,
+      "enabled": false
+    }
+  ]
+}
