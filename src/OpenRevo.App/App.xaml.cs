@@ -12,7 +12,14 @@ public partial class App : Application
         {
             var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OpenRevo");
             Directory.CreateDirectory(directory);
-            File.AppendAllText(Path.Combine(directory, "crash.log"), $"{DateTimeOffset.UtcNow:O} {e.Exception}\n");
+            try
+            {
+                var file = Path.Combine(directory, "crash.log");
+                if (File.Exists(file) && new FileInfo(file).Length > 65536) File.WriteAllText(file, "");
+                var diagnostic = OpenRevo.Core.MonitoringDiagnostic.From(e.Exception);
+                File.AppendAllText(file, $"{DateTimeOffset.UtcNow:O} {diagnostic.Code}: {diagnostic.Message}\n");
+            }
+            catch (Exception failure) when (failure is IOException or UnauthorizedAccessException) { }
         };
     }
     protected override void OnLaunched(LaunchActivatedEventArgs args)

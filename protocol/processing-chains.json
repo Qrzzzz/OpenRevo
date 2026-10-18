@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "serviceSha256": "0469cf6d9f55b9c9abed70db3a11ad126f5bad2e9246f45fb747e17e11aed450",
+  "methodEvidence": [
+    {
+      "type": "MyControlCenter.App",
+      "method": "M_MQTTService_ClientMessage",
+      "source": ".local/decompiled/GCUService/MyControlCenter/App.cs",
+      "line": 287,
+      "sourceSha256": "015e868126a7f6bc15cd3acee15cca9a220584336a612e0ebda0df7f2f7467b5",
+      "body": "runtime-protected-placeholder"
+    },
+    {
+      "type": "MyControlCenter.App",
+      "method": "Recieve",
+      "source": ".local/decompiled/GCUService/MyControlCenter/App.cs",
+      "line": 293,
+      "sourceSha256": "015e868126a7f6bc15cd3acee15cca9a220584336a612e0ebda0df7f2f7467b5",
+      "body": "runtime-protected-placeholder"
+    },
+    {
+      "type": "MyControlCenter.CustomizeCtrl",
+      "method": "Receive",
+      "source": ".local/decompiled/GCUService/MyControlCenter/CustomizeCtrl.cs",
+      "line": 246,
+      "sourceSha256": "dff6ee06f42353497c7ae5535d2485fb24b33c77249e8b0d03b5ab855b47c062",
+      "body": "runtime-protected-placeholder"
+    },
+    {
+      "type": "MyControlCenter.CustomizeCtrl",
+      "method": "PublishSupportAll",
+      "source": ".local/decompiled/GCUService/MyControlCenter/CustomizeCtrl.cs",
+      "line": 270,
+      "sourceSha256": "dff6ee06f42353497c7ae5535d2485fb24b33c77249e8b0d03b5ab855b47c062",
+      "body": "runtime-protected-placeholder"
+    },
+    {
+      "type": "MyControlCenter.MyFanCtrl",
+      "method": "Receive",
+      "source": ".local/decompiled/GCUService/MyControlCenter/MyFanCtrl.cs",
+      "line": 35,
+      "sourceSha256": "903b4f865ac8acfcd9d2c99e1e23df26380b6a78248116c7d4f612097e0363b8",
+      "body": "runtime-protected-placeholder"
+    },
+    {
+      "type": "MyControlCenter.MySystemCtrl",
+      "method": "Receive",
+      "source": ".local/decompiled/GCUService/MyControlCenter/MySystemCtrl.cs",
+      "line": 53,
+      "sourceSha256": "21c862ba26c70c6e2ea90b8b8336bbb1b924de0fb284ab18f6c7baf58a78f149",
+      "body": "runtime-protected-placeholder"
+    },
+    {
+      "type": "MyControlCenter.MySystemManager",
+      "method": "InitSystemInfo",
+      "source": ".local/decompiled/GCUService/MyControlCenter/MySystemManager.cs",
+      "line": 421,
+      "sourceSha256": "632c6af746c52e63bb01316d778ab8edb934cb0efd9d44fe48d338a5a002cf78",
+      "body": "runtime-protected-placeholder"
+    },
+    {
+      "type": "MyControlCenter.MqttClientCtrl",
+      "method": "PublishTopic",
+      "source": ".local/decompiled/GCUService/MyControlCenter/MqttClientCtrl.cs",
+      "line": 291,
+      "sourceSha256": "de44ebc737e06109cd98ae935620a7e7d649520e438b846100ccb411a820448b",
+      "body": "runtime-protected-placeholder"
+    }
+  ],
+  "verifiedEdges": [
+    {
+      "source": ".local/decompiled/Tray/SystrayComponent/SystrayApplicationContext.cs",
+      "sourceSha256": "c435810d489bea2705988e7d76a8735502d87c29b3b70a942c57cf16985ed047",
+      "line": 163,
+      "caller": "Service_ClientConnectionEvent",
+      "calleeOrOperation": "SendNumbersTopicToServer",
+      "recoveredSemantics": "connected=true constructs GETSUPPORT and GETSTATUS; no claim about the service handler"
+    },
+    {
+      "source": ".local/decompiled/Tray/UWP_Refactor.DataService/MQTTDatsService.cs",
+      "sourceSha256": "5cd876f8bf1075ad973652961a5ca55be958e597631f397a2e9541c9a6dbfe76",
+      "line": 241,
+      "caller": "SendNumbersTopicToServer",
+      "calleeOrOperation": "PublishTopic(command.key, command.value)",
+      "recoveredSemantics": "per-command dispatch under the tray command lock"
+    },
+    {
+      "source": ".local/decompiled/Tray/UWP_Refactor.DataService/MQTTDatsService.cs",
+      "sourceSha256": "5cd876f8bf1075ad973652961a5ca55be958e597631f397a2e9541c9a6dbfe76",
+      "line": 202,
+      "caller": "PublishTopic",
+      "calleeOrOperation": "client.Publish(topic, Encoding.ASCII.GetBytes(msg), (byte)2, retain)",
+      "recoveredSemantics": "JSON serialization; ASCII; QoS2; default retain=false in original tray only"
+    },
+    {
+      "source": ".local/decompiled/Tray/UWP_Refactor.DataService/MQTTDatsService.cs",
+      "sourceSha256": "5cd876f8bf1075ad973652961a5ca55be958e597631f397a2e9541c9a6dbfe76",
+      "line": 187,
+      "caller": "Client_MqttMsgPublishReceived",
+      "calleeOrOperation": "this.DataChange(e.Topic, val)",
+      "recoveredSemantics": "UTF8 decode then JSON object parse and topic callback"
+    },
+    {
+      "source": ".local/decompiled/Tray/SystrayComponent/SystrayApplicationContext.cs",
+      "sourceSha256": "c435810d489bea2705988e7d76a8735502d87c29b3b70a942c57cf16985ed047",
+      "line": 193,
+      "caller": "Service_DataChange",
+      "calleeOrOperation": "Json.ToObjectAsync<MyRamFan1p5>",
+      "recoveredSemantics": "Fan/Status consumed as MyRamFan1p5; OperatingMode copied to current mode"
+    },
+    {
+      "source": ".local/decompiled/GCUBridge/MQTT_SERVER/MQTTServer.cs",
+      "sourceSha256": "2c473d0fd59d22a5770eee08397890ccea83cb486b39637427602e544d96e9cd",
+      "line": 216,
+      "caller": "PublishTopic",
+      "calleeOrOperation": "WithRetainFlag(true)",
+      "recoveredSemantics": "bridge helper serializes JSON and publishes retained; does not prove every service response is retained"
+    }
+  ],
+  "limitation": "These are method declarations, not recovered dispatch edges or firmware semantics. No control writes were tested.",
+  "blackBoxReadChains": [
+    {
+      "request": "GETSUPPORT",
+      "topic": "Customize/SupportControl",
+      "observedResponse": "Customize/SupportInfo"
+    },
+    {
+      "request": "GETSTATUS",
+      "topic": "Fan/Control",
+      "observedResponse": "Fan/Status"
+    },
+    {
+      "request": "System_ON",
+      "topic": "System/Control",
+      "observedResponse": [
+        "System/CpuInfo",
+        "System/GpuInfo",
+        "System/FanInfo",
+        "System/BatteryInfo"
+      ]
+    }
+  ],
+  "ilCrossCheck": {
+    "method": "MySystemCtrl.Receive",
+    "rva": "0x8095e0",
+    "codeBytes": 11,
+    "result": "throw stub exists in raw IL; not merely a C# decompiler failure",
+    "artifact": ".local/analysis/system-controller-il.txt",
+    "sha256": "c947ac6c61bda469ec0063cba98f722231eb3774e69b437b47ef6128e35b1f96"
+  }
+}

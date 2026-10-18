@@ -19,7 +19,12 @@ if ($Publish) {
     $protocol = Join-Path $output 'protocol'
     New-Item -ItemType Directory -Path $docs,$protocol -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $root 'docs\mvp-audit.md') -Destination $docs
-    Copy-Item -LiteralPath (Join-Path $root 'protocol\live-evidence.json') -Destination $protocol
+    foreach ($name in @("v$version-audit.md",'processing-chains.md')) {
+        Copy-Item -LiteralPath (Join-Path $root "docs\$name") -Destination $docs
+    }
+    foreach ($name in @('live-evidence.json','registry.json','device-profiles.json','processing-chains.json')) {
+        Copy-Item -LiteralPath (Join-Path $root "protocol\$name") -Destination $protocol
+    }
     & (Join-Path $PSScriptRoot 'write-build-manifest.ps1') -OutputDirectory $output -Sdk $sdk
     $zip = Join-Path $root "artifacts\OpenRevo-$version-win-x64.zip"
     Compress-Archive -LiteralPath $output -DestinationPath $zip

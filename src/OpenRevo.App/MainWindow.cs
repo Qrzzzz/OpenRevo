@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.UI;
 using Microsoft.UI.Text;
 using Microsoft.UI.Windowing;
@@ -30,6 +31,10 @@ public sealed class MainWindow : Window
     private readonly TextBlock _configuration = Text("等待厂商配置状态", 14);
     private readonly TextBlock _identity = Text("正在读取安装与机型信息", 14);
     private readonly TextBlock _capAge = Text("等待能力响应", 13);
+    private readonly TextBlock _diagnosticText = Text("尚无异常诊断", 13);
+    private readonly List<MonitoringDiagnostic> _diagnostics = [];
+    private InstallationReport? _inspection;
+    private bool _exporting;
     private readonly InfoBar _error = new() { IsOpen = false, IsClosable = false, Severity = InfoBarSeverity.Warning };
     private readonly InfoBar _rangeWarning = new() { IsOpen = false, IsClosable = false, Severity = InfoBarSeverity.Warning, Title = "配置范围不一致" };
     private readonly Button _connect = new() { Content = "断开", MinWidth = 88 };
@@ -63,7 +68,7 @@ public sealed class MainWindow : Window
         var brand = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, VerticalAlignment = VerticalAlignment.Center };
         brand.Children.Add(new FontIcon { Glyph = "\uE9D9", FontSize = 17 });
         brand.Children.Add(Text("OpenRevo", 14, true));
-        brand.Children.Add(Text("预览版 0.1", 12));
+        brand.Children.Add(Text($"预览版 {AppVersion.Current}", 12));
         titleBar.Children.Add(brand);
         _root.Children.Add(titleBar);
         ExtendsContentIntoTitleBar = true;
@@ -104,7 +109,12 @@ public sealed class MainWindow : Window
         ToolTipService.SetToolTip(_refresh, "重新查询状态并请求传感器采样 (Ctrl+R)");
         _timer.Tick += (_, _) => Render();
         _timer.Start();
-        _root.Loaded += (_, _) => { SizeForCurrentDisplay(); UpdateCaptionColors(); StartSession(); };
+        _root.Loaded += (_, _) =>
+        {
+            SizeForCurrentDisplay(); UpdateCaptionColors(); StartSession();
+            // Establish XAML focus before the first keyboard accelerator.
+            DispatcherQueue.TryEnqueue(() => { if (!_closed) ((NavigationViewItem)_navigation.MenuItems[0]).Focus(FocusState.Programmatic); });
+        };
         Closed += (_, _) => { _closed = true; _connected = false; _timer.Stop(); _stop?.Cancel(); SaveLastSession(); };
         var refreshShortcut = new KeyboardAccelerator { Key = VirtualKey.R, Modifiers = VirtualKeyModifiers.Control };
         refreshShortcut.Invoked += (_, e) => { if (_connected) _observer?.RequestRefresh(); e.Handled = true; };
@@ -256,7 +266,7 @@ public sealed class MainWindow : Window
 
     private UIElement SettingsPage()
     {
-        var panel = Section("连接与外观", "OpenRevo 0.1 · Windows 11 原生界面");
+        var panel = Section("连接与外观", $"OpenRevo {AppVersion.Current} · Windows 11 原生界面");
         var theme = new ComboBox { Header = "应用主题", HorizontalAlignment = HorizontalAlignment.Left, MinWidth = 220 };
         theme.Items.Add("跟随系统"); theme.Items.Add("浅色"); theme.Items.Add("深色"); theme.SelectedIndex = 0;
         theme.SelectionChanged += (_, _) => _root.RequestedTheme = theme.SelectedIndex switch
@@ -270,6 +280,11 @@ public sealed class MainWindow : Window
         policy.Children.Add(Text("监测会启用厂商后台的共享采样计时器。断开只结束本应用的连接，不发送全局停止请求，以免影响原厂监控。"));
         policy.Children.Add(Text("当前开放状态读取与诊断导出。风扇曲线、电池阈值、屏幕色彩、功耗和超频写入尚未开放。"));
         panel.Children.Add(Card(policy));
+        var diagnostics = new StackPanel { Spacing = 12 };
+        diagnostics.Children.Add(Text("连接诊断", 18, true));
+        diagnostics.Children.Add(_diagnosticText);
+        diagnostics.Children.Add(Text("关闭窗口会保存 last-session.json；导出诊断包含识别结果、会话阶段和各主题新鲜度。", 12));
+        panel.Children.Add(Card(diagnostics));
         return new ScrollViewer { Content = panel, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
     }
 
@@ -283,18 +298,32 @@ public sealed class MainWindow : Window
         if (_closed || _session is { IsCompleted: false }) return;
         _stop?.Dispose(); _stop = new CancellationTokenSource();
         _observer = new BridgeObserver(); _connected = false; _samples.Clear(); _received = 0;
+        _installation = null; _inspection = null; _identity.Text = "正在读取本机身份与安装指纹…";
+        _capabilityKey = ""; _rawKey = "";
         _error.IsOpen = false; _connection.Text = "正在连接本机服务…"; _connect.Content = "断开";
         _session = RunSessionAsync(_observer, ++_generation, _stop.Token);
     }
 
     private async Task RunSessionAsync(BridgeObserver observer, int generation, CancellationToken token)
     {
-        string? failure = null;
+        MonitoringDiagnostic? failure = null;
         try
         {
-            _installation = await Task.Run(AuditedInstallation.Inspect, token);
+            _ = ProtocolEvidence.Registry;
+            InstallationReport? inspection = null;
+            try { _installation = await Task.Run(() => AuditedInstallation.Inspect(report => inspection = report), token); }
+            finally
+            {
+                _inspection = inspection;
+                if (inspection is not null)
+                {
+                    var id = inspection.Device;
+                    _identity.Text = $"{id.Manufacturer} {id.Model}\n主板  {id.Board}\nBIOS  {id.Bios}\n配置  {inspection.ProfileId}\n身份匹配  {inspection.DeviceMatch}\n文件匹配  {inspection.FileMatch}";
+                    _device.Text = $"{id.Model} · {id.Bios}";
+                }
+            }
             _device.Text = $"{_installation.Device.Model} · {_installation.Device.Bios}";
-            _identity.Text = $"{_installation.Device.Manufacturer} {_installation.Device.Model}\n主板  {_installation.Device.Board}\nBIOS  {_installation.Device.Bios}\n桥接文件  {_installation.BridgeSha256[..12]}…\n核心文件  {_installation.ServiceSha256[..12]}…";
+            _identity.Text += $"\n桥接文件  {_installation.BridgeSha256[..12]}…\n核心文件  {_installation.ServiceSha256[..12]}…";
             await Task.Run(() => observer.ObserveAsync(_installation, sample => DispatcherQueue.TryEnqueue(() =>
             {
                 if (_closed || generation != _generation) return;
@@ -305,14 +334,14 @@ public sealed class MainWindow : Window
             }), token), token);
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
-        catch (Exception ex) { failure = ex is OperationCanceledException ? "厂商服务响应超时。可检查后台服务后重新连接。" : ex.Message; }
+        catch (Exception ex) { failure = observer.LastDiagnostic ?? MonitoringDiagnostic.From(ex); AddDiagnostic(failure); }
         finally
         {
             if (!_closed && generation == _generation)
             {
                 _connected = false; _connection.Text = failure is null ? "已断开 · 保留上次收到的值" : "连接未完成或已中断";
                 _connect.Content = "重新连接"; _connect.IsEnabled = true;
-                if (failure is not null) { _error.Title = "无法继续监测"; _error.Message = failure; _error.IsOpen = true; }
+                if (failure is not null) { _error.Title = $"无法继续监测 · {failure.Code}"; _error.Message = failure.Message + "\n" + failure.NextStep; _error.IsOpen = true; }
                 Render();
             }
         }
@@ -322,8 +351,8 @@ public sealed class MainWindow : Window
     private string Age(TopicSample? sample)
     {
         if (sample is null) return "尚未收到状态";
-        var seconds = Math.Max(0, (DateTimeOffset.UtcNow - sample.ReceivedAtUtc).TotalSeconds);
-        var prefix = sample.Freshness(DateTimeOffset.UtcNow, _connected) switch
+        var seconds = Math.Max(0, sample.Age().TotalSeconds);
+        var prefix = sample.Freshness(TimeProvider.System, _connected) switch
         { SampleFreshness.Cached => "保留缓存", SampleFreshness.Stale => "旧数据", SampleFreshness.Disconnected => "已断开 · 历史值", _ => "已收到" };
         return $"{prefix} · {(seconds < 60 ? $"{seconds:0} 秒前" : $"{seconds / 60:0} 分钟前")}";
     }
@@ -331,7 +360,7 @@ public sealed class MainWindow : Window
     private void UpdateMetric(string key, TopicSample? sample, string value, string detail)
     {
         var text = _metricText[key]; text.Value.Text = value; text.Detail.Text = detail; text.Age.Text = Age(sample);
-        text.Value.Opacity = sample?.Freshness(DateTimeOffset.UtcNow, _connected) == SampleFreshness.Current ? 1 : 0.5;
+        text.Value.Opacity = sample?.Freshness(TimeProvider.System, _connected) == SampleFreshness.Current ? 1 : 0.5;
         AutomationProperties.SetName(text.Value, $"{value}，{detail}，{text.Age.Text}");
     }
 
@@ -344,6 +373,10 @@ public sealed class MainWindow : Window
     private void Render()
     {
         _refresh.IsEnabled = _connected;
+        var latest = _diagnostics.LastOrDefault();
+        var missing = ReadProtocol.Topics.Where(topic => !_samples.ContainsKey(topic));
+        _diagnosticText.Text = $"会话阶段：{_observer?.Phase ?? MonitorPhase.Idle}\n已接收 {_received} 条消息\n尚未收到：{string.Join("、", missing)}\n" +
+            (latest is null ? "暂无异常" : $"最近诊断：{latest.Code}\n{latest.Message}\n{latest.NextStep}");
         var cpu = Sample("System/CpuInfo"); var gpu = Sample("System/GpuInfo");
         var fan = Sample("System/FanInfo"); var battery = Sample("System/BatteryInfo"); var mode = Sample("Fan/Status");
         UpdateMetric("cpu", cpu, Number(cpu, "CpuTemperature", " °C", -20, 150), $"占用 {Number(cpu, "CpuUsage", "%", 0, 100)}");
@@ -362,10 +395,10 @@ public sealed class MainWindow : Window
     private void RenderCapabilities()
     {
         var sample = Sample("Customize/SupportInfo"); _capAge.Text = $"{Age(sample)} · BIOS 项目 {sample?.Text("BIOS_PROJECT_ID") ?? "—"} · 项目号 {sample?.Text("ProjectID") ?? "—"}";
-        var key = sample?.Payload.GetRawText() ?? "none";
+        var key = (sample?.Payload.GetRawText() ?? "none") + sample?.Freshness(TimeProvider.System, _connected);
         if (_capabilityKey == key) return;
         _capabilityKey = key; _capabilities.Children.Clear();
-        foreach (var capability in DeviceAudit.Capabilities(sample))
+        foreach (var capability in DeviceAudit.Capabilities(sample, _connected))
         {
             var content = new StackPanel { Spacing = 6 };
             content.Children.Add(Text($"{capability.Name}  ·  {capability.Availability}", 16, true));
@@ -388,23 +421,41 @@ public sealed class MainWindow : Window
 
     private string Diagnostics() => JsonSerializer.Serialize(new
     {
-        application = "OpenRevo", version = "0.1.0", exportedAtUtc = DateTimeOffset.UtcNow, connected = _connected,
+        schemaVersion = 2, application = "OpenRevo", version = AppVersion.Current, exportedAtUtc = DateTimeOffset.UtcNow, connected = _connected,
         device = _installation?.Device, bridgeSha256 = _installation?.BridgeSha256, serviceSha256 = _installation?.ServiceSha256,
+        inspection = _inspection, phase = _closed ? "Closed" : _observer?.Phase.ToString(), diagnostics = _diagnostics.ToArray(),
+        protocolSchemaVersion = ProtocolEvidence.Registry.GetProperty("schemaVersion").GetInt32(),
+        topicHealth = ReadProtocol.Topics.Select(topic => new { topic, received = _samples.ContainsKey(topic),
+            freshness = Sample(topic)?.Freshness(TimeProvider.System, _connected).ToString() ?? "Missing",
+            ageSeconds = Sample(topic)?.Age().TotalSeconds }).ToArray(),
         hardwareWritesImplemented = false, receivedCount = _received,
         requests = _observer?.Requests, samples = _samples.Values.OrderBy(s => s.Topic).ToArray()
-    }, new JsonSerializerOptions { WriteIndented = true });
+    }, new JsonSerializerOptions { WriteIndented = true, Converters = { new JsonStringEnumConverter() } });
 
     private async Task ExportAsync()
     {
+        if (_exporting || _closed) return;
+        _exporting = true;
         try
         {
             var picker = new FileSavePicker { SuggestedFileName = $"OpenRevo-{DateTime.Now:yyyyMMdd-HHmmss}", SuggestedStartLocation = PickerLocationId.DocumentsLibrary };
             picker.FileTypeChoices.Add("JSON 诊断", new List<string> { ".json" });
             WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
             var file = await picker.PickSaveFileAsync();
-            if (file is not null) await FileIO.WriteTextAsync(file, Diagnostics());
+            if (file is not null && !_closed) await FileIO.WriteTextAsync(file, Diagnostics());
         }
-        catch (Exception ex) { _error.Title = "无法导出诊断"; _error.Message = ex.Message; _error.IsOpen = true; }
+        catch (Exception)
+        {
+            var diagnostic = MonitoringDiagnostic.Create(DiagnosticCode.ExportFailed); AddDiagnostic(diagnostic);
+            _error.Title = diagnostic.Message; _error.Message = diagnostic.NextStep; _error.IsOpen = true;
+        }
+        finally { _exporting = false; }
+    }
+
+    private void AddDiagnostic(MonitoringDiagnostic diagnostic)
+    {
+        _diagnostics.Add(diagnostic);
+        if (_diagnostics.Count > 64) _diagnostics.RemoveAt(0);
     }
 
     private void SaveLastSession()
@@ -413,7 +464,7 @@ public sealed class MainWindow : Window
         {
             var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OpenRevo");
             Directory.CreateDirectory(directory);
-            File.WriteAllText(Path.Combine(directory, "last-session.json"), Diagnostics());
+            DiagnosticFile.Write(Path.Combine(directory, "last-session.json"), Diagnostics());
         }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }

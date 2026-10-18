@@ -4,4 +4,8 @@
     <RootNamespace>OpenRevo.Core</RootNamespace>
   </PropertyGroup>
   <ItemGroup><InternalsVisibleTo Include="OpenRevo.Tests" /></ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\protocol\device-profiles.json" LogicalName="OpenRevo.device-profiles.json" />
+    <EmbeddedResource Include="..\..\protocol\registry.json" LogicalName="OpenRevo.registry.json" />
+  </ItemGroup>
 </Project>

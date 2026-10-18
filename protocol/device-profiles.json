@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "profiles": [
+    {
+      "id": "mechrevo-yaoshi-x6ar55xy-n118mro24",
+      "manufacturer": "MECHREVO", "model": "YAOSHI Series",
+      "board": "YAOSHI Series-X6AR55xY", "bios": "N.1.18MRO24",
+      "bridge": { "sha256": "7A1405E231A5E8581C4E9FC4FCE2302A77578742AC643AA3D42F7DADACA80695", "bytes": 2125496 },
+      "service": { "sha256": "0469CF6D9F55B9C9ABED70DB3A11AD126F5BAD2E9246F45FB747E17E11AED450", "bytes": 15822584 },
+      "capabilityIdentity": { "ProjectID": "26", "CustomizeTarget": "56", "BIOS_PROJECT_ID": "IDY", "IsAMDPlatform": "0", "IsNvGpu": "1" },
+      "telemetryRequirements": { "SystemMonitorSupport": "1", "ServiceReady": "1" },
+      "evidence": "protocol/live-evidence.json",
+      "scope": "This board, BIOS and service pair only; no hardware-write acceptance"
+    }
+  ]
+}

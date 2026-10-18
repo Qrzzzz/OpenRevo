@@ -1,0 +1,1187 @@
+{
+  "schemaVersion": 1,
+  "sourceHashFormat": "UTF-8 without BOM, LF newlines",
+  "sources": [
+    {
+      "path": "protocol/commands.json",
+      "sha256": "6385541dba211e63a00fe745a6517b04466ba9dea905f15fe13f4eedf6401734"
+    },
+    {
+      "path": "protocol/live-evidence.json",
+      "sha256": "6537f333a55873991f7a77e641e5084617541642910e873f315e339e220c180a"
+    },
+    {
+      "path": "protocol/processing-chains.json",
+      "sha256": "18597b7569ce87e5ca01adbbf604b48d653439aeaea02fb704a2b82034e0046b"
+    },
+    {
+      "path": "protocol/device-profiles.json",
+      "sha256": "3e04fad3c727f97320440dde7d1976c01accddd4e32e7287857c714c55d4d432"
+    }
+  ],
+  "scope": "audited local machine only; handler metadata is not recovered handler logic",
+  "requests": [
+    {
+      "id": "Capabilities",
+      "topic": "Customize/SupportControl",
+      "action": "GETSUPPORT",
+      "enabled": true,
+      "qos": 0,
+      "retain": false,
+      "payloadFields": {
+        "Action": "string literal: GETSUPPORT"
+      },
+      "responseTopics": [
+        "Customize/SupportInfo"
+      ],
+      "businessAck": "not established",
+      "failure": "typed diagnostic; session stops; manual reconnect; no replay",
+      "sideEffect": "query capabilities; no hardware control",
+      "liveEvidence": "protocol/live-evidence.json",
+      "handlerBodyRecovered": false,
+      "rollbackVerified": false
+    },
+    {
+      "id": "FanStatus",
+      "topic": "Fan/Control",
+      "action": "GETSTATUS",
+      "enabled": true,
+      "qos": 0,
+      "retain": false,
+      "payloadFields": {
+        "Action": "string literal: GETSTATUS"
+      },
+      "responseTopics": [
+        "Fan/Status"
+      ],
+      "businessAck": "not established",
+      "failure": "typed diagnostic; session stops; manual reconnect; no replay",
+      "sideEffect": "query current configuration; values are not live watts",
+      "liveEvidence": "protocol/live-evidence.json",
+      "handlerBodyRecovered": false,
+      "rollbackVerified": false
+    },
+    {
+      "id": "EnableTelemetry",
+      "topic": "System/Control",
+      "action": "System_ON",
+      "enabled": true,
+      "qos": 0,
+      "retain": false,
+      "payloadFields": {
+        "Action": "string literal: System_ON"
+      },
+      "responseTopics": [
+        "System/CpuInfo",
+        "System/GpuInfo",
+        "System/FanInfo",
+        "System/BatteryInfo"
+      ],
+      "businessAck": "not established",
+      "failure": "typed diagnostic; session stops; manual reconnect; no replay",
+      "sideEffect": "starts vendor shared sampling timer; no ownership or global stop",
+      "liveEvidence": "protocol/live-evidence.json",
+      "handlerBodyRecovered": false,
+      "rollbackVerified": false
+    },
+    {
+      "id": "OPERATING_GAMING_MODE",
+      "topic": "Fan/Control",
+      "action": "OPERATING_GAMING_MODE",
+      "enabled": false,
+      "senderEvidence": {
+        "path": ".local/decompiled/Tray/SystrayComponent/SystrayApplicationContext.cs",
+        "line": 858
+      },
+      "liveEvidence": null,
+      "handlerBodyRecovered": false,
+      "rollbackVerified": false,
+      "reason": "mode-dependent cooling/power coupling and recovery unverified"
+    },
+    {
+      "id": "OPERATING_OFFICE_MODE",
+      "topic": "Fan/Control",
+      "action": "OPERATING_OFFICE_MODE",
+      "enabled": false,
+      "senderEvidence": {
+        "path": ".local/decompiled/Tray/SystrayComponent/SystrayApplicationContext.cs",
+        "line": 866
+      },
+      "liveEvidence": null,
+      "handlerBodyRecovered": false,
+      "rollbackVerified": false,
+      "reason": "mode-dependent cooling/power coupling and recovery unverified"
+    },
+    {
+      "id": "OPERATING_TURBO_MODE",
+      "topic": "Fan/Control",
+      "action": "OPERATING_TURBO_MODE",
+      "enabled": false,
+      "senderEvidence": {
+        "path": ".local/decompiled/Tray/SystrayComponent/SystrayApplicationContext.cs",
+        "line": 874
+      },
+      "liveEvidence": null,
+      "handlerBodyRecovered": false,
+      "rollbackVerified": false,
+      "reason": "mode-dependent cooling/power coupling and recovery unverified"
+    },
+    {
+      "id": "OPERATING_CUSTOM_MODE",
+      "topic": "Fan/Control",
+      "action": "OPERATING_CUSTOM_MODE",
+      "enabled": false,
+      "senderEvidence": {
+        "path": ".local/decompiled/Tray/SystrayComponent/SystrayApplicationContext.cs",
+        "line": 882
+      },
+      "liveEvidence": null,
+      "handlerBodyRecovered": false,
+      "rollbackVerified": false,
+      "reason": "mode-dependent cooling/power coupling and recovery unverified"
+    }
+  ],
+  "subscriptions": [
+    {
+      "topic": "Customize/SupportInfo",
+      "fields": {
+        "APVersionCheck": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "AcRecoverySwitchBiosSupport": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "AcRecoverySwitchSupport": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "AutoDetectSystemLang": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "BIOS_PROJECT_ID": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPUPerformanceAndOverClockMenuSupport": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "ColorCalibration": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "ColorCalibrationSupport": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CustomizeTarget": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "DGpuDirectConnectionSupport": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "FanBoostBtnSupport": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "FanSettingsSupport": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "IsAMDPlatform": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "IsGamingMonitorSupport": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "IsHeroProject": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "IsNvGpu": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "IsProjectIdCommercial": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "IsProjectIdCommercialHAVE20DB": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "IsTurboSubModeSupport": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "Language": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "LanguageList": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "LightbarSupport": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "LiquidCoolingAutoModeSupport": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "LiquidCoolingSupport": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "NumPadSupport": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "OTASupport": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "OcSettingsSupport": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "ProjectID": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "RGBLightbarSupport": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "RamFan1p5Support": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "ServiceReady": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "SystemMonitorSupport": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "TurboModeSupport": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "TypeCSupport": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "UninstallCalibration": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "unconfirmed or encoded"
+        }
+      },
+      "evidence": [
+        {
+          "file": ".local/evidence/live-observation.json",
+          "sha256": "e07db99ca09c0650658546fa997faeca4c6bf7a3568f0b04fcbec5eaa15e64f4",
+          "retainedCount": 1,
+          "nonRetainedCount": 0
+        },
+        {
+          "file": ".local/evidence/queried-observation.json",
+          "sha256": "72382163dc897ebb960d30d7231e2178d392cf4b3c63bc9f9f9801dcfc3292e9",
+          "retainedCount": 1,
+          "nonRetainedCount": 1
+        },
+        {
+          "file": ".local/evidence/vendor-ui-observation.json",
+          "sha256": "698bb5949d0bdba058f90ef8d885d1f57ba6e0223ef5bc177cca4e2f8ed61e8f",
+          "retainedCount": 1,
+          "nonRetainedCount": 0
+        },
+        {
+          "file": ".local/evidence/independent-monitor-observation.json",
+          "sha256": "ae73a35a41cef38bb68fe2713b49acaea58563599aca17eb55a43dbbdb732508",
+          "retainedCount": 1,
+          "nonRetainedCount": 1
+        },
+        {
+          "file": ".local/evidence/csharp-observation.json",
+          "sha256": "1322709ad4b3b510f6b8a8c4dbba224dbea14f4cdec96da3001db42ecd0b0d02",
+          "retainedCount": 1,
+          "nonRetainedCount": 2
+        }
+      ],
+      "freshness": "retained=cached; live ages on monotonic clock; >15 seconds stale; disconnected=history"
+    },
+    {
+      "topic": "Fan/Status",
+      "fields": {
+        "BSOD_DefaultNotify": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "BSOD_TimestampRestored": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_AmdCoreFreq": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_AmdCoreFreqMaximum": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_AmdCoreFreqOC": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_AmdCoreVoltage": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_AmdCoreVoltageMaximum": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_AmdCoreVoltageOC": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_AmdFPPT": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_AmdOverClockSupport": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_AmdSPL": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_AmdSPPT": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_AmdTccTarget": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_OffsetCoreVoltage": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_OffsetCoreVoltageMaximum": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_OffsetCoreVoltageMinimum": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_OffsetCoreVoltageOC": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_OffsetCoreVoltageSupport": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_PL1": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_PL1Maximum": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_PL1Minimum": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_PL2": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_PL2Maximum": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_PL2Minimum": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_PL4": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_PL4Maximum": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_PL4Minimum": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_PL4_Double_Flag": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_PerformanceAndOverClockMenuSwitch": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_TccOffset": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_TccOffsetMaximum": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CPU_TccOffsetSwitch": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CustomProfileIndex": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CustomTGPinGCUforGN21_Enable": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "CustomTGPinGCUforGN21_Value": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "Extreme": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "FAN_FanSwitchSpeed": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "FAN_FanSwitchSpeedEnabled": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "FAN_SafetyProtect": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "FAN_SafetyProtectNotify": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "FAN_TableName": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "FanBoostBtnSupport": {
+          "jsonTypes": [
+            "bool"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "FanBoostEnable": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_ConfigurableTGPMaximum": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_ConfigurableTGPMinimum": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_ConfigurableTGPSwitch": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_ConfigurableTGPTarget": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_CoreClockOffset": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_CoreClockOffsetMaximum": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_CoreClockOffsetMaximumHWOC": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_CoreClockOffsetMinimum": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_CoreClockOffsetOC": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_DynamicBoost": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_DynamicBoostMaximum": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_DynamicBoostMinimum": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_DynamicBoostSwitch": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_DynamicBoostTotalProcessingPowerTarget": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_MemoryClockOffset": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_MemoryClockOffsetMaximum": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_MemoryClockOffsetMaximumHWOC": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_MemoryClockOffsetMinimum": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_MemoryClockOffsetMinimumHWOC": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_MemoryClockOffsetOC": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_TargetTemperature": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_TargetTemperatureMaximum": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_TargetTemperatureMinimum": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_WhisperModeMinFpsMaximum": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_WhisperModeMinFpsMinimum": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_WhisperModeMinFps_BALANCED": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_WhisperModeMinFps_QUIET": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_WhisperModeMinFps_QUIETER": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_WhisperModeSetting": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_WhisperModeSupport": {
+          "jsonTypes": [
+            "bool"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GPU_WhisperModeSwitch": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GamingProfileIndex": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "IsAC": {
+          "jsonTypes": [
+            "bool"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "IsAMDPlatform": {
+          "jsonTypes": [
+            "bool"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "IsNvGpu": {
+          "jsonTypes": [
+            "bool"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "MEM_MemoryOverClockSupport": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "MEM_MemoryOverClockSwitch": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "OcSupport": {
+          "jsonTypes": [
+            "bool"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "OfficeProfileIndex": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "OperatingMode": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "OverClockingSwitch": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "PowerMode": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "ProfileName": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "Silent": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "TjMax": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "TurboGPUOCEnabled": {
+          "jsonTypes": [
+            "bool"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "TurboModeOption": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "TurboProfileIndex": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        }
+      },
+      "evidence": [
+        {
+          "file": ".local/evidence/queried-observation.json",
+          "sha256": "72382163dc897ebb960d30d7231e2178d392cf4b3c63bc9f9f9801dcfc3292e9",
+          "retainedCount": 0,
+          "nonRetainedCount": 1
+        },
+        {
+          "file": ".local/evidence/independent-monitor-observation.json",
+          "sha256": "ae73a35a41cef38bb68fe2713b49acaea58563599aca17eb55a43dbbdb732508",
+          "retainedCount": 0,
+          "nonRetainedCount": 1
+        },
+        {
+          "file": ".local/evidence/csharp-observation.json",
+          "sha256": "1322709ad4b3b510f6b8a8c4dbba224dbea14f4cdec96da3001db42ecd0b0d02",
+          "retainedCount": 0,
+          "nonRetainedCount": 2
+        }
+      ],
+      "freshness": "retained=cached; live ages on monotonic clock; >15 seconds stale; disconnected=history"
+    },
+    {
+      "topic": "Tray/Status",
+      "fields": {},
+      "evidence": [],
+      "freshness": "retained=cached; live ages on monotonic clock; >15 seconds stale; disconnected=history"
+    },
+    {
+      "topic": "System/FanInfo",
+      "fields": {
+        "CpuFanDuty": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "percent"
+        },
+        "CpuFanRpm": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "rpm"
+        },
+        "GpuFanDuty": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "percent"
+        },
+        "GpuFanRpm": {
+          "jsonTypes": [
+            "int"
+          ],
+          "unit": "rpm"
+        }
+      },
+      "evidence": [
+        {
+          "file": ".local/evidence/vendor-ui-observation.json",
+          "sha256": "698bb5949d0bdba058f90ef8d885d1f57ba6e0223ef5bc177cca4e2f8ed61e8f",
+          "retainedCount": 0,
+          "nonRetainedCount": 16
+        },
+        {
+          "file": ".local/evidence/independent-monitor-observation.json",
+          "sha256": "ae73a35a41cef38bb68fe2713b49acaea58563599aca17eb55a43dbbdb732508",
+          "retainedCount": 0,
+          "nonRetainedCount": 6
+        },
+        {
+          "file": ".local/evidence/csharp-observation.json",
+          "sha256": "1322709ad4b3b510f6b8a8c4dbba224dbea14f4cdec96da3001db42ecd0b0d02",
+          "retainedCount": 0,
+          "nonRetainedCount": 9
+        }
+      ],
+      "freshness": "retained=cached; live ages on monotonic clock; >15 seconds stale; disconnected=history"
+    },
+    {
+      "topic": "System/CpuInfo",
+      "fields": {
+        "CpuTemperature": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "degC"
+        },
+        "CpuUsage": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "percent"
+        }
+      },
+      "evidence": [
+        {
+          "file": ".local/evidence/vendor-ui-observation.json",
+          "sha256": "698bb5949d0bdba058f90ef8d885d1f57ba6e0223ef5bc177cca4e2f8ed61e8f",
+          "retainedCount": 0,
+          "nonRetainedCount": 16
+        },
+        {
+          "file": ".local/evidence/independent-monitor-observation.json",
+          "sha256": "ae73a35a41cef38bb68fe2713b49acaea58563599aca17eb55a43dbbdb732508",
+          "retainedCount": 0,
+          "nonRetainedCount": 6
+        },
+        {
+          "file": ".local/evidence/csharp-observation.json",
+          "sha256": "1322709ad4b3b510f6b8a8c4dbba224dbea14f4cdec96da3001db42ecd0b0d02",
+          "retainedCount": 0,
+          "nonRetainedCount": 9
+        }
+      ],
+      "freshness": "retained=cached; live ages on monotonic clock; >15 seconds stale; disconnected=history"
+    },
+    {
+      "topic": "System/GpuInfo",
+      "fields": {
+        "GpuCoreFreq": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GpuMem": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GpuMemFreq": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GpuPState": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "GpuTemperature": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "degC"
+        },
+        "GpuUsage": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "percent"
+        }
+      },
+      "evidence": [
+        {
+          "file": ".local/evidence/vendor-ui-observation.json",
+          "sha256": "698bb5949d0bdba058f90ef8d885d1f57ba6e0223ef5bc177cca4e2f8ed61e8f",
+          "retainedCount": 0,
+          "nonRetainedCount": 1
+        },
+        {
+          "file": ".local/evidence/independent-monitor-observation.json",
+          "sha256": "ae73a35a41cef38bb68fe2713b49acaea58563599aca17eb55a43dbbdb732508",
+          "retainedCount": 0,
+          "nonRetainedCount": 1
+        }
+      ],
+      "freshness": "retained=cached; live ages on monotonic clock; >15 seconds stale; disconnected=history"
+    },
+    {
+      "topic": "System/BatteryInfo",
+      "fields": {
+        "BatteryAbnormal": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "BatteryCapacity": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "BatteryCycleCount": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        },
+        "BatteryLifePercent": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "percent"
+        },
+        "BatteryLifeRemaining": {
+          "jsonTypes": [
+            "str"
+          ],
+          "unit": "unconfirmed or encoded"
+        }
+      },
+      "evidence": [
+        {
+          "file": ".local/evidence/vendor-ui-observation.json",
+          "sha256": "698bb5949d0bdba058f90ef8d885d1f57ba6e0223ef5bc177cca4e2f8ed61e8f",
+          "retainedCount": 0,
+          "nonRetainedCount": 2
+        },
+        {
+          "file": ".local/evidence/independent-monitor-observation.json",
+          "sha256": "ae73a35a41cef38bb68fe2713b49acaea58563599aca17eb55a43dbbdb732508",
+          "retainedCount": 0,
+          "nonRetainedCount": 1
+        },
+        {
+          "file": ".local/evidence/csharp-observation.json",
+          "sha256": "1322709ad4b3b510f6b8a8c4dbba224dbea14f4cdec96da3001db42ecd0b0d02",
+          "retainedCount": 0,
+          "nonRetainedCount": 1
+        }
+      ],
+      "freshness": "retained=cached; live ages on monotonic clock; >15 seconds stale; disconnected=history"
+    }
+  ],
+  "machineProfiles": "protocol/device-profiles.json",
+  "processingChains": "protocol/processing-chains.json",
+  "timing": {
+    "pingSeconds": 10,
+    "configurationRefreshSeconds": 15,
+    "staleSeconds": 15,
+    "capabilityLeaseSeconds": 45
+  },
+  "blocked": [
+    "System_OFF",
+    "raw publish",
+    "driver access",
+    "remote hosts",
+    "automatic reconnect or control replay"
+  ]
+}

@@ -36,6 +36,8 @@ jobs:
           }
       - name: Test protocol and state model (no hardware access)
         run: ./scripts/test.ps1
+      - name: Check protocol evidence registry
+        run: python scripts/build-evidence-registry.py --check
       - name: Build diagnostic CLI
         run: dotnet build src/OpenRevo.Probe/OpenRevo.Probe.csproj -c Release -p:RestoreLockedMode=true --nologo
       - name: Build and package WinUI app
@@ -43,7 +45,7 @@ jobs:
       - name: Verify portable archive
         run: ./scripts/verify-portable.ps1
       - name: Preserve portable package
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: OpenRevo-windows-x64
           path: |
@@ -54,7 +56,7 @@ jobs:
           retention-days: 14
       - name: Preserve validation logs
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: validation-logs
           path: .local/validation/

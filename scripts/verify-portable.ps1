@@ -22,11 +22,17 @@ try {
         $name = $entry.FullName.Replace('\','/')
         if (!$name.StartsWith($prefix) -or ($name.Split('/') -contains '..')) { throw "Unexpected ZIP path: $name" }
         if ($name -match '(^|/)(\.local|decompiled|GCUBridge\.exe|GCUService\.exe|UWACPIDriver\.sys)(/|$)') { throw "Vendor/local evidence bundled: $name" }
-        $entries[$name.Substring($prefix.Length)] = $entry
+        $relative = $name.Substring($prefix.Length)
+        if ($entries.ContainsKey($relative)) { throw "Duplicate ZIP path: $relative" }
+        $entries[$relative] = $entry
     }
-    foreach ($required in @('OpenRevo.exe','OpenRevo.dll','OpenRevo.Core.dll','Microsoft.UI.Xaml.dll','coreclr.dll','hostfxr.dll','README.md','docs/mvp-audit.md','protocol/live-evidence.json','build-manifest.json')) {
+    foreach ($required in @('OpenRevo.exe','OpenRevo.dll','OpenRevo.Core.dll','Microsoft.UI.Xaml.dll','coreclr.dll','hostfxr.dll','README.md','docs/mvp-audit.md','docs/v0.2.0-audit.md','docs/processing-chains.md','protocol/registry.json','protocol/device-profiles.json','protocol/processing-chains.json','protocol/live-evidence.json','build-manifest.json')) {
         if (!$entries.ContainsKey($required)) { throw "Missing portable dependency: $required" }
     }
+    $manifestStream = $entries['build-manifest.json'].Open()
+    try { $manifestHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($manifestStream)) }
+    finally { $manifestStream.Dispose() }
+    if ($manifestHash -ne (Get-FileHash (Join-Path $directory 'build-manifest.json')).Hash) { throw 'Archive manifest differs from verified local manifest.' }
     foreach ($binary in $manifest.binaries) {
         $stream = $entries[$binary.path].Open()
         try { $digest = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($stream)).ToLowerInvariant() }

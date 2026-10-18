@@ -2,17 +2,17 @@
 
 面向本机机械革命控制中心的功能与通信协议研究。目标是独立实现所需后台能力，不复刻厂商前端。
 
-## 当前 MVP
+## 当前版本：0.2.0
 
 已实现 Windows 11 原生 WinUI 3 的本机监控 MVP：设备与服务识别、CPU/GPU 温度和占用、两路风扇、电量、当前模式、能力清单、原始状态与本地诊断导出。
 
 本版仍依赖已安装的厂商后台。启动时校验已审计的主板、BIOS 与服务文件；不匹配时停止连接。风扇曲线、色彩、电池阈值、功耗和超频写入尚未开放。缓存、旧数据、缺失值与断开后的历史值会分别显示。
 
-详细范围与验证记录见 [MVP 审计](docs/mvp-audit.md)，本机真实消息摘要见 [live-evidence.json](protocol/live-evidence.json)。
+0.2.0 增加单调时间计时、能力降级与过期处理、独立心跳超时、类型化诊断，以及嵌入式机型配置和统一协议证据目录。详细范围与验证记录见 [0.2.0 审计](docs/v0.2.0-audit.md)，0.1.0 基线见 [MVP 审计](docs/mvp-audit.md)。
 
 ## 下载与自动化
 
-[GitHub Releases](https://github.com/Qrzzzz/OpenRevo/releases) 提供 Windows x64 便携 ZIP 与 `SHA256SUMS.txt`。首个版本为 `v0.1.0`，属于本机监控预览版。
+[GitHub Releases](https://github.com/Qrzzzz/OpenRevo/releases) 提供 Windows x64 便携 ZIP 与 `SHA256SUMS.txt`。0.2.0 仍属于本机监控预览版，适用范围和未完成验收见随包记录。
 
 `Windows CI` 在 main 推送和拉取请求中执行受限协议测试、CLI / WinUI 构建、便携包与源文件身份校验，保留包和验证日志。云端工作流不连接本机厂商服务，也不执行硬件写入。
 
@@ -27,7 +27,7 @@
 .\scripts\build.ps1 -DotnetPath '你的 SDK 路径\dotnet.exe' -Publish
 ```
 
-便携包输出到 `artifacts/OpenRevo-0.1.0-win-x64.zip`，解压整个文件夹后运行 `OpenRevo.exe`。自包含构建不要求目标机器另外安装 .NET。`Ctrl+R` 刷新，`Ctrl+S` 导出；“连接与外观”可切换主题。
+便携包输出到 `artifacts/OpenRevo-0.2.0-win-x64.zip`，解压整个文件夹后运行 `OpenRevo.exe`。自包含构建不要求目标机器另外安装 .NET。`Ctrl+R` 刷新，`Ctrl+S` 导出；“连接与外观”可切换主题。
 
 `scripts/test.ps1 -LiveProbe` 会实际连接本机厂商服务，发送三种已审计的查询 / 监控请求；先关闭或断开 OpenRevo 窗口以释放连接槽位。普通测试仅使用本地测试服务器，不访问硬件。
 
@@ -45,10 +45,15 @@
 
 ## 阅读入口
 
+- [后续更新计划](docs/roadmap.md)
+- [0.2.0 验收记录](docs/v0.2.0-audit.md)
+- [关键处理链路与未恢复部分](docs/processing-chains.md)
 - [静态分析、证据与复现](docs/static-analysis.md)
 - [MQTT 协议与已知消息](docs/protocol.md)
 - [屏幕、风扇、电池、功耗的实现边界](docs/hardware-controls.md)
-- [机器可读协议目录](protocol/commands.json)
+- [统一协议证据目录](protocol/registry.json)
+- [机型审计配置](protocol/device-profiles.json)
+- [历史静态发送端目录](protocol/commands.json)
 
 静态分析脚本只处理文件副本、反编译文本和系统只读元数据。`observe-bridge.py`、`OpenRevo.Probe` 和 MVP 使用仅限本机的 MQTT 读取连接，允许固定查询及启用厂商监控采样；没有通用发布入口，不加载厂商程序集或调用驱动。工具、厂商二进制、完整反编译结果和分析中间文件统一保存在被忽略的 `.local/`。
 

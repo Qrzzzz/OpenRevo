@@ -123,16 +123,16 @@ Test("capability declaration stays separate from MVP availability", () =>
 });
 Test("retained state never becomes live because time passes", () =>
 {
-    var sample = Sample("Fan/Status", "{}", true);
-    Check(sample.Freshness(sample.ReceivedAtUtc, true) == SampleFreshness.Cached);
-    Check(sample.Freshness(sample.ReceivedAtUtc.AddMinutes(3), true) == SampleFreshness.Cached);
+    var clock = new TestClock(); var sample = Sample("Fan/Status", "{}", true) with { ReceivedTimestamp = clock.GetTimestamp() };
+    Check(sample.Freshness(clock, true) == SampleFreshness.Cached);
+    clock.Advance(TimeSpan.FromMinutes(3)); Check(sample.Freshness(clock, true) == SampleFreshness.Cached);
 });
 Test("stale and disconnected states are distinct", () =>
 {
-    var sample = Sample("Fan/Status", "{}");
-    Check(sample.Freshness(sample.ReceivedAtUtc.AddSeconds(2), true) == SampleFreshness.Current);
-    Check(sample.Freshness(sample.ReceivedAtUtc.AddSeconds(16), true) == SampleFreshness.Stale);
-    Check(sample.Freshness(sample.ReceivedAtUtc, false) == SampleFreshness.Disconnected);
+    var clock = new TestClock(); var sample = Sample("Fan/Status", "{}") with { ReceivedTimestamp = clock.GetTimestamp() };
+    clock.Advance(TimeSpan.FromSeconds(2)); Check(sample.Freshness(clock, true) == SampleFreshness.Current);
+    clock.Advance(TimeSpan.FromSeconds(14)); Check(sample.Freshness(clock, true) == SampleFreshness.Stale);
+    Check(sample.Freshness(clock, false) == SampleFreshness.Disconnected);
 });
 Test("observed TGP target 140 maximum 115 is preserved as an inconsistency", () =>
 {
@@ -143,7 +143,7 @@ Test("observed TGP target 140 maximum 115 is preserved as an inconsistency", () 
 });
 Test("unknown operating mode is not silently mapped", () => Check(DeviceAudit.ModeName("42").Contains("42") && DeviceAudit.ModeName(null) == "等待状态"));
 
-AsyncTest("loopback session sends only audited queries and survives ping then peer close", async () =>
+AsyncTest("loopback session sends only audited queries and receives status before peer close", async () =>
 {
     using var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start();
     var endpoint = (IPEndPoint)listener.LocalEndpoint;
@@ -192,8 +192,8 @@ AsyncTest("rejected authentication does not subscribe or publish", async () =>
         await stream.WriteAsync(new byte[] { 0x20, 2, 0, 4 }, stop.Token);
     });
     var observer = new BridgeObserver();
-    await RejectAsync<InvalidDataException>(() => observer.ObserveAtAsync("test", (IPEndPoint)listener.LocalEndpoint, _ => { }, _ => { }, stop.Token, false));
-    await server; Check(observer.Requests.Count == 0);
+    await RejectAsync<MonitoringException>(() => observer.ObserveAtAsync("test", (IPEndPoint)listener.LocalEndpoint, _ => { }, _ => { }, stop.Token, false));
+    await server; Check(observer.Requests.Count == 0 && observer.LastDiagnostic?.Code == DiagnosticCode.AuthenticationRejected);
 });
 AsyncTest("remote host is rejected before any socket connection", async () =>
     await RejectAsync<InvalidOperationException>(() => new BridgeObserver().ObserveAtAsync("test", new IPEndPoint(IPAddress.Parse("192.0.2.1"), 13688), _ => { }, _ => { }, default, false)));
@@ -216,6 +216,136 @@ AsyncTest("cancellation terminates an idle established session promptly", async 
     await server;
 });
 
+Test("clock corrections do not rejuvenate samples or capability leases", () =>
+{
+    var clock = new TestClock(); var sample = Sample("Customize/SupportInfo", supportJson) with { ReceivedTimestamp = clock.GetTimestamp() };
+    var lease = new TelemetryLease(clock, TimeSpan.FromSeconds(45)); Check(lease.Observe(sample));
+    clock.WallClock = clock.WallClock.AddYears(20);
+    Check(sample.Freshness(clock, true) == SampleFreshness.Current && lease.Demand());
+    clock.Advance(TimeSpan.FromSeconds(46)); clock.WallClock = DateTimeOffset.UnixEpoch.AddYears(-20);
+    Check(sample.Freshness(clock, true) == SampleFreshness.Stale);
+    Reject<MonitoringException>(() => lease.Demand());
+});
+Test("retained capabilities cannot grant or extend a monitoring lease", () =>
+{
+    var clock = new TestClock(); var lease = new TelemetryLease(clock, TimeSpan.FromSeconds(45));
+    var sample = Sample("Customize/SupportInfo", supportJson) with { ReceivedTimestamp = clock.GetTimestamp() };
+    Check(!lease.Observe(sample with { Retained = true }) && !lease.Demand());
+    Check(lease.Observe(sample)); clock.Advance(TimeSpan.FromSeconds(40));
+    Check(!lease.Observe(sample with { Retained = true, ReceivedTimestamp = clock.GetTimestamp() }));
+    clock.Advance(TimeSpan.FromSeconds(6)); Reject<MonitoringException>(() => lease.Demand());
+});
+Test("live capability renewal extends lease without repeating initial enable", () =>
+{
+    var clock = new TestClock(); var lease = new TelemetryLease(clock, TimeSpan.FromSeconds(45));
+    var sample = Sample("Customize/SupportInfo", supportJson) with { ReceivedTimestamp = clock.GetTimestamp() };
+    Check(lease.Observe(sample)); clock.Advance(TimeSpan.FromSeconds(40));
+    Check(!lease.Observe(sample with { ReceivedTimestamp = clock.GetTimestamp() }));
+    clock.Advance(TimeSpan.FromSeconds(40)); Check(lease.Demand());
+});
+Test("capability downgrade revokes grant and cannot silently reauthorize the same session", () =>
+{
+    var clock = new TestClock(); var lease = new TelemetryLease(clock, TimeSpan.FromSeconds(45));
+    var sample = Sample("Customize/SupportInfo", supportJson) with { ReceivedTimestamp = clock.GetTimestamp() };
+    lease.Observe(sample);
+    Reject<MonitoringException>(() => lease.Observe(Sample("Customize/SupportInfo", supportJson.Replace("\"ServiceReady\":1", "\"ServiceReady\":0"))));
+    Reject<MonitoringException>(() => lease.Demand()); Reject<MonitoringException>(() => lease.Observe(sample));
+});
+Test("unknown boolean capability encodings do not become supported", () =>
+{
+    var sample = Sample("Customize/SupportInfo", """{"FanSettingsSupport":4,"ColorCalibrationSupport":4}""");
+    var caps = DeviceAudit.Capabilities(sample);
+    Check(caps.Single(c => c.Field == "FanSettingsSupport").DeclaredSupported is null);
+    Check(caps.Single(c => c.Field == "ColorCalibrationSupport").DeclaredSupported == true);
+    Check(DeviceAudit.Capabilities(sample, false).All(c => c.Availability == "历史声明"));
+});
+Test("model identity is independently checked alongside board and BIOS", () =>
+{
+    var profile = AuditedProfile.Current;
+    Check(profile.CapabilityIdentity["BIOS_PROJECT_ID"] == "IDY" && profile.Bridge.Bytes == 2125496);
+    Reject<MonitoringException>(() => AuditedProfile.ValidateDevice(new(profile.Manufacturer, "other model", profile.Board, profile.Bios)));
+});
+Test("embedded evidence matches the closed runtime allowlist and preserves unknown handlers", () =>
+{
+    var registry = ProtocolEvidence.Registry;
+    Check(registry.GetProperty("requests").EnumerateArray().Count(r => r.GetProperty("enabled").GetBoolean()) == 3);
+    Check(registry.GetProperty("requests").EnumerateArray().Count(r => !r.GetProperty("enabled").GetBoolean()) == 4);
+    Check(registry.GetProperty("requests").EnumerateArray().All(r => !r.GetProperty("handlerBodyRecovered").GetBoolean()));
+    Check(registry.GetProperty("subscriptions").GetArrayLength() == 7);
+});
+Test("typed diagnostics do not serialize original exception secrets", () =>
+{
+    foreach (var exception in new Exception[] { new IOException("private-test-password"), new InvalidDataException("private-test-password"), new Exception("private-test-password") })
+    {
+        var diagnostic = MonitoringDiagnostic.From(exception);
+        Check(!JsonSerializer.Serialize(diagnostic).Contains("private-test-password"));
+    }
+    Check(MonitoringDiagnostic.From(new SocketException()).Code == DiagnosticCode.ServiceUnavailable);
+    Check(MonitoringDiagnostic.From(new EndOfStreamException()).Code == DiagnosticCode.ConnectionClosed);
+    Check(MonitoringDiagnostic.From(new OperationCanceledException()).Code == DiagnosticCode.ResponseTimeout);
+});
+
+async Task SessionFailure(DiagnosticCode expected, bool revoke, bool answerPings)
+{
+    using var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start();
+    using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+    var timing = new ObserverTiming(TimeSpan.FromMilliseconds(25), TimeSpan.FromMilliseconds(250), TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(2));
+    var observer = new BridgeObserver(TimeProvider.System, timing);
+    var observedPackets = new List<Packet>();
+    var server = Task.Run(async () =>
+    {
+        using var peer = await listener.AcceptTcpClientAsync(stop.Token); var stream = peer.GetStream();
+        _ = await MqttWire.ReadAsync(stream, stop.Token); await stream.WriteAsync(new byte[] { 0x20, 2, 0, 0 }, stop.Token);
+        _ = await MqttWire.ReadAsync(stream, stop.Token); await stream.WriteAsync(new byte[] { 0x90, 9, 0, 1, 0, 0, 0, 0, 0, 0, 0 }, stop.Token);
+        for (var i = 0; i < 2; i++) observedPackets.Add(await MqttWire.ReadAsync(stream, stop.Token));
+        var live = Publish("Customize/SupportInfo", supportJson);
+        await stream.WriteAsync(MqttWire.Frame(live.Header, live.Body), stop.Token);
+        observedPackets.Add(await MqttWire.ReadAsync(stream, stop.Token));
+        if (revoke)
+        {
+            var invalid = Publish("Customize/SupportInfo", supportJson.Replace("\"ServiceReady\":1", "\"ServiceReady\":0"));
+            await stream.WriteAsync(MqttWire.Frame(invalid.Header, invalid.Body), stop.Token);
+        }
+        while (true)
+        {
+            var packet = await MqttWire.ReadAsync(stream, stop.Token); observedPackets.Add(packet);
+            if (packet.Header == 0xe0) break;
+            if (packet.Header == 0xc0 && answerPings) await stream.WriteAsync(new byte[] { 0xd0, 0 }, stop.Token);
+            if (!answerPings && packet.Header == 0x30) await stream.WriteAsync(MqttWire.Frame(live.Header, live.Body), stop.Token);
+            if (!revoke)
+            {
+                var sensor = Publish("System/CpuInfo", """{"CpuTemperature":58}""");
+                await stream.WriteAsync(MqttWire.Frame(sensor.Header, sensor.Body), stop.Token);
+            }
+        }
+    });
+    await RejectAsync<MonitoringException>(() => observer.ObserveAtAsync("test", (IPEndPoint)listener.LocalEndpoint,
+        sample => { if (revoke && sample.Text("ServiceReady") == "0") observer.RequestRefresh(); }, _ => { }, stop.Token, false));
+    await server;
+    Check(observer.LastDiagnostic?.Code == expected && observer.Phase == MonitorPhase.Stopped);
+    Check(observer.Requests.Count(r => r.Action == "System_ON") == 1);
+    Check(observedPackets[^1].Header == 0xe0 && !observedPackets.Any(p => Encoding.UTF8.GetString(p.Body).Contains("System_OFF")));
+    if (revoke) Check(observer.Requests.Count == 3, "Downgrade must stop before any pending manual refresh");
+}
+AsyncTest("live capability downgrade disconnects before queued manual refresh", () => SessionFailure(DiagnosticCode.CapabilityRevoked, true, true));
+AsyncTest("sensor traffic and PINGRESP do not renew capability authorization", () => SessionFailure(DiagnosticCode.CapabilityExpired, false, true));
+AsyncTest("fresh sensor and capability traffic cannot mask missing PINGRESP", () => SessionFailure(DiagnosticCode.ResponseTimeout, false, false));
+
+AsyncTest("rejected subscription has a distinct diagnostic and no queries", async () =>
+{
+    using var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start();
+    using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+    var server = Task.Run(async () =>
+    {
+        using var peer = await listener.AcceptTcpClientAsync(stop.Token); var stream = peer.GetStream();
+        _ = await MqttWire.ReadAsync(stream, stop.Token); await stream.WriteAsync(new byte[] { 0x20, 2, 0, 0 }, stop.Token);
+        _ = await MqttWire.ReadAsync(stream, stop.Token); await stream.WriteAsync(new byte[] { 0x90, 9, 0, 1, 0x80, 0, 0, 0, 0, 0, 0 }, stop.Token);
+    });
+    var observer = new BridgeObserver();
+    await RejectAsync<MonitoringException>(() => observer.ObserveAtAsync("test", (IPEndPoint)listener.LocalEndpoint, _ => { }, _ => { }, stop.Token, false));
+    await server; Check(observer.Requests.Count == 0 && observer.LastDiagnostic?.Code == DiagnosticCode.SubscriptionRejected);
+});
+
 var failures = new List<string>();
 foreach (var test in cases)
 {
@@ -229,4 +359,14 @@ sealed class FragmentedStream(byte[] bytes) : MemoryStream(bytes)
 {
     public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         => base.ReadAsync(buffer[..Math.Min(1, buffer.Length)], cancellationToken);
+}
+
+sealed class TestClock : TimeProvider
+{
+    private long _ticks;
+    public DateTimeOffset WallClock { get; set; } = DateTimeOffset.UnixEpoch;
+    public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+    public override long GetTimestamp() => _ticks;
+    public override DateTimeOffset GetUtcNow() => WallClock;
+    public void Advance(TimeSpan elapsed) { _ticks += elapsed.Ticks; }
 }

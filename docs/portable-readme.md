@@ -1,4 +1,4 @@
-# OpenRevo 0.1 本机预览版
+# OpenRevo 0.2.0 本机预览版
 
 解压整个文件夹，双击 `OpenRevo.exe`。请保留文件夹内所有运行文件。无需安装 .NET 或管理员权限。
 
@@ -8,6 +8,8 @@
 
 数据尚未收到时显示“—”；缓存、旧数据、断开后的历史值会分别标记。个别主题可能只在数据变化时推送，时间变旧不等同于硬件故障。点击刷新可重新查询配置并请求监控采样。
 
+能力响应不再匹配、45 秒未续期或心跳响应超时后会结束连接，需要手动重新连接。新鲜度按单调时间计算；“连接与外观”显示会话阶段和诊断，导出包含安装匹配与主题健康状态。
+
 本版不开放风扇曲线、电池阈值、屏幕色彩、功耗或超频写入。厂商返回的配置值不代表实时功耗。
 
 - `Ctrl+R`：刷新。
@@ -16,4 +18,4 @@
 
 监测会启用厂商后台的共享采样计时器。断开只结束本应用连接，不发送全局停止请求。关闭窗口会在 `%LOCALAPPDATA%\OpenRevo\last-session.json` 保存最后一轮本地诊断。
 
-详细证据与验证范围见 `docs/mvp-audit.md`，消息摘要见 `protocol/live-evidence.json`。此包为未签名预览构建，后续版本见 https://github.com/Qrzzzz/OpenRevo/releases 。
+本版验证范围及未执行项目见 `docs/v0.2.0-audit.md`，关键链路见 `docs/processing-chains.md`，统一目录见 `protocol/registry.json`。此包为未签名预览构建，后续版本见 https://github.com/Qrzzzz/OpenRevo/releases 。
