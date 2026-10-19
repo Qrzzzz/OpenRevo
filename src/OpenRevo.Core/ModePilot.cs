@@ -1,0 +1,308 @@
+using System.Text.Json;
+using System.Security.Cryptography;
+
+namespace OpenRevo.Core;
+
+public enum PilotMode { Office = 0, Balanced = 1, Turbo = 2, Custom = 3 }
+public enum PilotPhase { Idle, Preparing, Sending, AwaitingReadback, Applied, Restoring, Restored, Uncertain, Interrupted }
+public sealed record ModePilotResult(bool Succeeded, string Detail, TopicSample? Snapshot);
+public sealed record ModeJournal(string Id, string ProfileId, PilotPhase Phase, DateTimeOffset UpdatedAtUtc,
+    TopicSample? Baseline, PilotMode? Target, TopicSample? Confirmed, string Detail,
+    string? BaselineMode = null, string? ConfirmedMode = null, string? ModeSource = null, string? FailureReason = null);
+
+public static class ModePilotPolicy
+{
+    public static readonly string[] ConfigurationFields = ["OperatingMode", "ProfileName", "OfficeProfileIndex", "GamingProfileIndex",
+        "FAN_TableName", "FanBoostEnable", "CPU_PL1", "CPU_PL2", "CPU_PL4", "CPU_TccOffset", "CPU_OffsetCoreVoltage",
+        "GPU_ConfigurableTGPTarget", "GPU_DynamicBoost", "GPU_CoreClockOffset", "GPU_MemoryClockOffset", "OverClockingSwitch", "PowerMode", "Extreme", "Silent"];
+    public static JsonElement Evidence { get; } = Load();
+    public static string Action(PilotMode mode) => mode switch
+    {
+        PilotMode.Office => "OPERATING_OFFICE_MODE", PilotMode.Balanced => "OPERATING_GAMING_MODE",
+        PilotMode.Turbo => "OPERATING_TURBO_MODE", PilotMode.Custom => "OPERATING_CUSTOM_MODE",
+        _ => throw new ArgumentOutOfRangeException(nameof(mode))
+    };
+    public static bool Allows(PilotMode mode) => Enum.IsDefined(mode) && Enabled && Evidence.GetProperty("observedConfigurations").TryGetProperty(((int)mode).ToString(), out _);
+    public static bool Enabled => Evidence.GetProperty("verified").GetBoolean();
+    private static JsonElement Load()
+    {
+        using var stream = typeof(ModePilotPolicy).Assembly.GetManifestResourceStream("OpenRevo.mode-pilot.json")!;
+        using var json = JsonDocument.Parse(stream);
+        var root = json.RootElement;
+        if (root.GetProperty("schemaVersion").GetInt32() != 1 || root.GetProperty("profileId").GetString() != AuditedProfile.Current.Id
+            || root.GetProperty("actions").GetProperty("0").GetString() != "OPERATING_OFFICE_MODE"
+            || root.GetProperty("actions").GetProperty("1").GetString() != "OPERATING_GAMING_MODE"
+            || root.GetProperty("actions").GetProperty("2").GetString() != "OPERATING_TURBO_MODE"
+            || root.GetProperty("actions").GetProperty("3").GetString() != "OPERATING_CUSTOM_MODE"
+            || !root.GetProperty("acOnly").GetBoolean()) throw new InvalidDataException("Unreviewed pilot policy.");
+        if (root.GetProperty("verified").GetBoolean())
+        {
+            using var evidence = typeof(ModePilotPolicy).Assembly.GetManifestResourceStream("OpenRevo.mode-evidence.json")!;
+            var hash = Convert.ToHexString(SHA256.HashData(evidence)).ToLowerInvariant();
+            if (hash != root.GetProperty("evidence").GetProperty("sha256").GetString()) throw new InvalidDataException("Pilot evidence identity mismatch.");
+        }
+        return root.Clone();
+    }
+    // This vendor can temporarily return null OperatingMode while switching.
+    // Keep that raw value; resolve mode separately from corroborating evidence.
+    public static bool Complete(TopicSample? sample) => sample is not null && ConfigurationFields.Where(f => f != "OperatingMode").All(f => sample.Text(f) is not null);
+    public static bool SameConfiguration(TopicSample? a, TopicSample? b) => Complete(a) && Complete(b)
+        && a!.Payload.EnumerateObject().Count() == b!.Payload.EnumerateObject().Count()
+        && a.Payload.EnumerateObject().All(p => b.Payload.TryGetProperty(p.Name, out var value) && p.Value.GetRawText() == value.GetRawText());
+    internal static bool Audited(TopicSample sample)
+    {
+        return AuditedMode(sample) is not null;
+    }
+    internal static string? AuditedMode(TopicSample sample) => !Enabled || !Complete(sample) ? null :
+        Evidence.GetProperty("observedConfigurations").EnumerateObject().Where(p => p.Name is "0" or "1" or "2" or "3")
+            .Where(p => p.Value.EnumerateObject().Count() == sample.Payload.EnumerateObject().Count()
+                && p.Value.EnumerateObject().Where(f => f.Name != "OperatingMode" || sample.Text(f.Name) is not null)
+                    .All(f => sample.Payload.TryGetProperty(f.Name, out var value) && f.Value.GetRawText() == value.GetRawText()))
+            .Select(p => p.Name).SingleOrDefault();
+}
+
+/// <summary>One explicit switch followed by explicit restore, in the same connection only.</summary>
+public sealed class ModePilot
+{
+    private readonly object _gate = new();
+    private readonly TimeProvider _clock;
+    private readonly bool _audit;
+    private readonly TimeSpan _timeout;
+    private Func<PilotMode, CancellationToken, Task>? _send;
+    private Func<CancellationToken, Task>? _query;
+    private Func<bool>? _authorized;
+    private CancellationToken _connection;
+    private TopicSample? _capabilities, _status, _tray;
+    private TopicSample? _expectedBefore;
+    private PilotMode _pendingTarget;
+    private long _capSequence, _statusSequence;
+    private int _busy;
+    private Action<ModeJournal>? _save;
+    private ModeJournal _journal = new(Guid.NewGuid().ToString("N"), AuditedProfile.Current.Id, PilotPhase.Idle, DateTimeOffset.UtcNow, null, null, null, "四模式切换试点，需保持接通电源；自定义调用原厂已保存配置");
+    internal ModePilot(TimeProvider clock, bool audit = false, TimeSpan? timeout = null) { _clock = clock; _audit = audit; _timeout = timeout ?? TimeSpan.FromSeconds(10); }
+    public ModeJournal Journal { get { lock (_gate) return _journal; } }
+    public bool Busy => Volatile.Read(ref _busy) != 0;
+    public bool Enabled => ModePilotPolicy.Enabled || _audit;
+    public TopicSample? CurrentStatus { get { lock (_gate) return _status; } }
+    public string? CurrentMode { get { lock (_gate) return _status is null ? null : ResolveMode(_status); } }
+    public bool CanSwitch => Ready(false);
+    public bool CanSwitchTo(PilotMode mode)
+    {
+        lock (_gate) return (_audit || ModePilotPolicy.Allows(mode)) && Ready(false) && CurrentMode != ((int)mode).ToString()
+            && (mode != PilotMode.Turbo || _capabilities?.Text("TurboModeSupport") == "1");
+    }
+    public bool CanRestore => Ready(true);
+    private bool Ready(bool restore)
+    {
+        lock (_gate)
+        {
+            if (Busy || _status is null || (restore ? _journal.Phase != PilotPhase.Applied : _journal.Phase is not (PilotPhase.Idle or PilotPhase.Restored))) return false;
+            try { Require(_status); return !restore || ModePilotPolicy.SameConfiguration(_status, _journal.Confirmed); }
+            catch (InvalidOperationException) { return false; }
+        }
+    }
+    public void SetJournalWriter(Action<ModeJournal> writer) { lock (_gate) _save = writer; }
+
+    internal void Bind(Func<PilotMode, CancellationToken, Task> send, Func<CancellationToken, Task> query, Func<bool> authorized, CancellationToken connection)
+    { lock (_gate) { _send = send; _query = query; _authorized = authorized; _connection = connection; } }
+
+    internal void Observe(TopicSample sample)
+    {
+        lock (_gate)
+        {
+            if (sample.Topic == "Customize/SupportInfo" && !sample.Retained) { _capabilities = sample; _capSequence++; }
+            if (sample.Topic == "Tray/Status" && !sample.Retained)
+            {
+                _tray = sample;
+                if (_journal.Phase == PilotPhase.Applied && (sample.Text("OperatingMode") != _journal.ConfirmedMode || !Ac(sample)))
+                    Set(PilotPhase.Uncertain, "托盘状态已改变，停止恢复写入，请在原厂界面核对。", persistRequired: false);
+            }
+            if (sample.Topic != "Fan/Status" || sample.Retained) return;
+            _status = sample; _statusSequence++;
+            if (_journal.Phase == PilotPhase.Applied && (!ModePilotPolicy.SameConfiguration(sample, _journal.Confirmed) || !Ac(sample)))
+                Set(PilotPhase.Uncertain, "配置或供电已改变，可能存在原厂干预；停止恢复写入，请在原厂界面核对。", persistRequired: false);
+        }
+    }
+
+    internal void End()
+    {
+        lock (_gate)
+        {
+            _send = null; _query = null; _authorized = null;
+            if (_journal.Phase is PilotPhase.Applied or PilotPhase.Sending or PilotPhase.AwaitingReadback or PilotPhase.Restoring)
+                Set(PilotPhase.Interrupted, "连接已结束，不会自动恢复或重放；请用原厂界面核对基线。", persistRequired: false);
+        }
+    }
+
+    private static bool Ac(TopicSample? sample) => bool.TryParse(sample?.Text("IsAC"), out var value) && value;
+    private string? ResolveMode(TopicSample sample)
+    {
+        if (sample.Text("OperatingMode") is "0" or "1" or "2" or "3") return sample.Text("OperatingMode");
+        if (sample.Text("OperatingMode") is not null) return null;
+        var audited = ModePilotPolicy.AuditedMode(sample);
+        if (audited is not null) return audited;
+        if (_audit && _tray?.Freshness(_clock, true) == SampleFreshness.Current && Ac(_tray)
+            && _tray.Text("OperatingMode") is "0" or "1" or "2" or "3") return _tray.Text("OperatingMode");
+        return null;
+    }
+    internal void CheckSending()
+    {
+        lock (_gate)
+        {
+            if (_journal.Phase is not (PilotPhase.Sending or PilotPhase.Restoring) || _status is null)
+                throw new InvalidOperationException("操作已中断。");
+            Require(_status);
+            RequireTarget(_pendingTarget);
+            if (!ModePilotPolicy.SameConfiguration(_status, _expectedBefore)) throw new InvalidOperationException("发送前配置已改变，未发送。");
+        }
+    }
+    private Task Query(CancellationToken token)
+    {
+        Func<CancellationToken, Task> query;
+        lock (_gate) query = _query ?? throw new InvalidOperationException("连接未就绪。");
+        return query(token);
+    }
+    private void RequireTarget(PilotMode mode)
+    {
+        if (mode == PilotMode.Turbo && _capabilities?.Text("TurboModeSupport") != "1")
+            throw new InvalidOperationException("当前实时能力不允许狂暴模式，未发送。");
+    }
+    private void Require(TopicSample sample)
+    {
+        if (!Enabled || _send is null || _connection.IsCancellationRequested)
+            throw new InvalidOperationException("试点尚未通过本机审计或连接已失效。");
+        if (_capabilities is null || _capabilities.Freshness(_clock, true) != SampleFreshness.Current
+            || !DeviceAudit.MatchesAuditedTelemetry(_capabilities) || _capabilities.Text("FanSettingsSupport") != "1")
+            throw new InvalidOperationException("需要当前机型的实时模式能力确认。");
+        if (sample.Freshness(_clock, true) != SampleFreshness.Current || !Ac(sample) || ResolveMode(sample) is null
+            || !ModePilotPolicy.Complete(sample)) throw new InvalidOperationException("需接通电源并处于已审计的四种模式之一，且配置完整、新鲜。");
+        if (!_audit && !ModePilotPolicy.Audited(sample)) throw new InvalidOperationException("当前配置与实机审计结果不一致，请先重新审计。");
+        if (_tray?.Freshness(_clock, true) == SampleFreshness.Current && _tray.Text("OperatingMode") != ResolveMode(sample))
+            throw new InvalidOperationException("两种状态的模式尚未一致，暂不允许发送。");
+        if (_authorized?.Invoke() != true) throw new InvalidOperationException("监控授权已失效。");
+        if (_save is null) throw new InvalidOperationException("恢复记录尚未配置，禁止发送。");
+    }
+
+    private void Set(PilotPhase phase, string detail, bool persistRequired = true)
+    {
+        _journal = _journal with { Phase = phase, Detail = detail, UpdatedAtUtc = _clock.GetUtcNow() };
+        try { _save?.Invoke(_journal); }
+        catch (Exception ex) when (!persistRequired && ex is IOException or UnauthorizedAccessException)
+        { _journal = _journal with { Phase = PilotPhase.Uncertain, Detail = "恢复记录保存失败；禁止继续写入，请使用原厂界面。" }; }
+    }
+
+    private async Task<TopicSample> Fresh(CancellationToken token)
+    {
+        long cap, status;
+        lock (_gate) { cap = _capSequence; status = _statusSequence; }
+        await Query(token);
+        var start = _clock.GetTimestamp();
+        while (_clock.GetElapsedTime(start) < _timeout)
+        {
+            token.ThrowIfCancellationRequested();
+            lock (_gate)
+            {
+                if (_capSequence > cap && _statusSequence > status && _status is not null) { Require(_status); return _status; }
+            }
+            await Task.Delay(75, token);
+        }
+        throw new TimeoutException("未收到新的完整能力和配置响应，未发送模式命令。");
+    }
+
+    public Task<ModePilotResult> SwitchAsync(PilotMode mode, CancellationToken token = default) => Operate(mode, false, token);
+    public Task<ModePilotResult> RestoreAsync(CancellationToken token = default) => Operate(default, true, token);
+
+    private async Task<ModePilotResult> Operate(PilotMode target, bool restore, CancellationToken caller)
+    {
+        if (!restore && !_audit && !ModePilotPolicy.Allows(target)) return new(false, "目标模式尚未完成本机回读与恢复审计，未发送。", null);
+        if (!Enum.IsDefined(target)) return new(false, "只允许办公、均衡、狂暴或原厂已保存的自定义模式。", null);
+        if (Interlocked.CompareExchange(ref _busy, 1, 0) != 0) return new(false, "已有操作进行中，未排队或发送。", null);
+        var mayHaveSent = false;
+        try
+        {
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(caller, _connection);
+            var token = linked.Token;
+            lock (_gate)
+            {
+                if (restore ? _journal.Phase != PilotPhase.Applied : _journal.Phase is not (PilotPhase.Idle or PilotPhase.Restored))
+                    throw new InvalidOperationException("先完成当前操作的恢复；结果不确定时交由原厂界面核对。");
+                if (!restore) Set(PilotPhase.Preparing, "正在回读当前配置，尚未发送。");
+            }
+            var before = await Fresh(token);
+            TopicSample? baseline;
+            lock (_gate)
+            {
+                if (restore)
+                {
+                    baseline = _journal.Baseline ?? throw new InvalidOperationException("缺少基线。");
+                    if (ModePilotPolicy.SameConfiguration(before, baseline)) { Set(PilotPhase.Restored, "配置已回到基线，未重复发送。"); return new(true, _journal.Detail, before); }
+                    if (!ModePilotPolicy.SameConfiguration(before, _journal.Confirmed)) throw new InvalidOperationException("配置已被改变，禁止覆盖其他控制者的结果。");
+                    target = (PilotMode)int.Parse(_journal.BaselineMode ?? throw new InvalidOperationException("缺少已确认的基线模式。"));
+                    if (!_audit && !ModePilotPolicy.Allows(target)) throw new InvalidOperationException("基线模式未经审计，禁止恢复写入。");
+                }
+                else
+                {
+                    baseline = before;
+                    if (ResolveMode(before) == ((int)target).ToString()) { Set(PilotPhase.Restored, "已处于所选模式，未发送命令。"); return new(true, _journal.Detail, before); }
+                    _journal = new(Guid.NewGuid().ToString("N"), AuditedProfile.Current.Id, PilotPhase.Preparing, _clock.GetUtcNow(), baseline, target, null, "基线已保存", ResolveMode(before));
+                }
+                Require(before);
+                RequireTarget(target);
+                _pendingTarget = target;
+                _expectedBefore = before;
+                Set(restore ? PilotPhase.Restoring : PilotPhase.Sending, restore ? "恢复原模式；只发送一次。" : "切换模式；只发送一次。");
+            }
+            long sequence;
+            Func<PilotMode, CancellationToken, Task> sender;
+            lock (_gate) { sequence = _statusSequence; sender = _send ?? throw new InvalidOperationException("连接已结束。"); mayHaveSent = true; }
+            await sender(target, token);
+            lock (_gate) Set(PilotPhase.AwaitingReadback, "已发送，等待两次一致的新配置回读；尚未判定成功。");
+            var start = _clock.GetTimestamp(); var lastQuery = start;
+            TopicSample? first = null;
+            long firstSequence = sequence;
+            await Query(token);
+            while (_clock.GetElapsedTime(start) < _timeout)
+            {
+                token.ThrowIfCancellationRequested();
+                lock (_gate)
+                {
+                    if (_statusSequence > sequence && _status is not null)
+                    {
+                        if (!Ac(_status)) throw new InvalidOperationException("供电已改变，停止等待并交由原厂界面核对。");
+                        if (_authorized?.Invoke() != true || _capabilities?.Freshness(_clock, true) != SampleFreshness.Current
+                            || !DeviceAudit.MatchesAuditedTelemetry(_capabilities!)) throw new InvalidOperationException("能力或连接已失效。");
+                        if (ModePilotPolicy.Complete(_status) && ResolveMode(_status) == ((int)target).ToString())
+                        {
+                            if (first is null) { first = _status; firstSequence = _statusSequence; }
+                            else if (!ModePilotPolicy.SameConfiguration(first, _status)) { first = _status; firstSequence = _statusSequence; }
+                            else if (_statusSequence > firstSequence && _clock.GetElapsedTime(first.ReceivedTimestamp, _status.ReceivedTimestamp) >= TimeSpan.FromMilliseconds(500))
+                            {
+                                Require(_status);
+                                if (restore && !ModePilotPolicy.SameConfiguration(baseline, _status)) throw new InvalidOperationException("模式已恢复，但联动配置未回到基线。");
+                                _journal = _journal with { Confirmed = _status, ConfirmedMode = ((int)target).ToString(),
+                                    ModeSource = _status.Text("OperatingMode") is not null ? "Fan/Status" : _audit ? "fresh Tray/Status + Fan/Status configuration" : "audited exact configuration fingerprint" };
+                                Set(restore ? PilotPhase.Restored : PilotPhase.Applied, restore ? "原模式和审计配置字段已回读恢复。" : "目标模式已两次回读一致，可显式恢复原模式。");
+                                return new(true, _journal.Detail, _status);
+                            }
+                        }
+                        sequence = _statusSequence;
+                    }
+                }
+                if (_clock.GetElapsedTime(lastQuery) >= TimeSpan.FromSeconds(1)) { await Query(token); lastQuery = _clock.GetTimestamp(); }
+                await Task.Delay(75, token);
+            }
+            throw new TimeoutException("模式回读超时，结果不确定；不重发或自动恢复。");
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or OperationCanceledException or TimeoutException)
+        {
+            lock (_gate)
+            {
+                _journal = _journal with { FailureReason = ex is InvalidOperationException or TimeoutException ? ex.Message : ex.GetType().Name };
+                Set(mayHaveSent ? PilotPhase.Uncertain : restore ? PilotPhase.Uncertain : PilotPhase.Idle,
+                    mayHaveSent ? "结果不确定；请用原厂界面核对基线，不会自动重发或恢复。" : ex.Message, persistRequired: false);
+            }
+            return new(false, Journal.Detail, null);
+        }
+        finally { Interlocked.Exchange(ref _busy, 0); }
+    }
+}

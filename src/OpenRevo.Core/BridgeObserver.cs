@@ -23,8 +23,10 @@ public sealed class BridgeObserver
     private readonly ObserverTiming _timing;
     public MonitorPhase Phase { get; private set; }
     public MonitoringDiagnostic? LastDiagnostic { get; private set; }
+    public ModePilot Pilot { get; }
     public BridgeObserver() : this(TimeProvider.System, ObserverTiming.Default) { }
-    internal BridgeObserver(TimeProvider clock, ObserverTiming timing) { _clock = clock; _timing = timing; }
+    internal BridgeObserver(TimeProvider clock, ObserverTiming timing, bool auditModes = false)
+    { _clock = clock; _timing = timing; Pilot = new ModePilot(clock, auditModes); }
     public IReadOnlyList<RequestTrace> Requests => _trace.ToArray();
     public void RequestRefresh() => Interlocked.Exchange(ref _refresh, 1);
 
@@ -53,18 +55,18 @@ public sealed class BridgeObserver
             await client.ConnectAsync(endpoint, timeout.Token);
         }
         await using var stream = client.GetStream();
-        async Task Send(byte[] bytes, CancellationToken ct)
+        async Task Send(byte[] bytes, CancellationToken ct, Action? beforeWrite = null)
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
             timeout.CancelAfter(TimeSpan.FromSeconds(5));
             await writeLock.WaitAsync(timeout.Token);
-            try { await stream.WriteAsync(bytes, timeout.Token); }
+            try { beforeWrite?.Invoke(); await stream.WriteAsync(bytes, timeout.Token); }
             finally { writeLock.Release(); }
         }
-        async Task Query(ReadRequest request)
+        async Task Query(ReadRequest request, CancellationToken? caller = null)
         {
             if (request == ReadRequest.EnableTelemetry && !lease.Demand()) return;
-            await Send(MqttWire.Query(request), token);
+            await Send(MqttWire.Query(request), caller ?? token);
             var (topic, action) = ReadProtocol.Describe(request);
             _trace.Enqueue(new(DateTimeOffset.UtcNow, topic, action));
             while (_trace.Count > 256) _trace.TryDequeue(out _);
@@ -100,6 +102,18 @@ public sealed class BridgeObserver
                             throw new MonitoringException(DiagnosticCode.SubscriptionRejected);
                         subscribed = true;
                         Phase = MonitorPhase.WaitingCapabilities;
+                        Pilot.Bind(async (mode, ct) =>
+                        {
+                            await Send(MqttWire.Mode(mode), ct, () =>
+                            {
+                                if (!lease.Demand() || Phase != MonitorPhase.Monitoring) throw new InvalidOperationException("监控授权已失效。");
+                                Pilot.CheckSending();
+                            });
+                            var action = ModePilotPolicy.Action(mode);
+                            _trace.Enqueue(new(DateTimeOffset.UtcNow, "Fan/Control", action));
+                            while (_trace.Count > 256) _trace.TryDequeue(out _);
+                        }, async ct => { await Query(ReadRequest.Capabilities, ct); await Query(ReadRequest.FanStatus, ct); },
+                            () => Phase == MonitorPhase.Monitoring && lease.Demand(), token);
                         onState("已连接 · 等待实时能力确认");
                         await Query(ReadRequest.Capabilities);
                         await Query(ReadRequest.FanStatus);
@@ -108,11 +122,13 @@ public sealed class BridgeObserver
                     case 3:
                         var sample = MqttWire.ParsePublish(packet, _clock.GetUtcNow()) with { ReceivedTimestamp = _clock.GetTimestamp() };
                         onMessage(sample);
-                        if (subscribed && lease.Observe(sample))
+                        var firstCapability = subscribed && lease.Observe(sample);
+                        Pilot.Observe(sample);
+                        if (firstCapability)
                         {
                             await Query(ReadRequest.EnableTelemetry);
                             Phase = MonitorPhase.Monitoring;
-                            onState("已连接 · 只读监测");
+                            onState("已连接 · 监测中");
                         }
                         break;
                     case 13:
@@ -161,6 +177,7 @@ public sealed class BridgeObserver
         finally
         {
             lifetime.Cancel();
+            Pilot.End();
             // The session is clean and has no will or retained outgoing messages.
             try
             {
@@ -176,7 +193,7 @@ public sealed class BridgeObserver
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         { LastDiagnostic = MonitoringDiagnostic.Create(DiagnosticCode.Cancelled); throw; }
         catch (Exception exception) { LastDiagnostic = MonitoringDiagnostic.From(exception); throw; }
-        finally { Phase = MonitorPhase.Stopped; }
+        finally { Phase = MonitorPhase.Stopped; Pilot.End(); }
     }
 
     private static FileStream AcquireSlot()

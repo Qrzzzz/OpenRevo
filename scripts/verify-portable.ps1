@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot
 . (Join-Path $PSScriptRoot 'version.ps1')
 $version = Get-OpenRevoVersion
@@ -26,7 +26,7 @@ try {
         if ($entries.ContainsKey($relative)) { throw "Duplicate ZIP path: $relative" }
         $entries[$relative] = $entry
     }
-    foreach ($required in @('OpenRevo.exe','OpenRevo.dll','OpenRevo.Core.dll','Microsoft.UI.Xaml.dll','coreclr.dll','hostfxr.dll','README.md','docs/mvp-audit.md','docs/v0.2.0-audit.md','docs/processing-chains.md','protocol/registry.json','protocol/device-profiles.json','protocol/processing-chains.json','protocol/live-evidence.json','build-manifest.json')) {
+    foreach ($required in @('OpenRevo.exe','OpenRevo.dll','OpenRevo.Core.dll','Microsoft.UI.Xaml.dll','coreclr.dll','hostfxr.dll','README.md','docs/mvp-audit.md',"docs/v$version-audit.md",'docs/processing-chains.md','protocol/registry.json','protocol/device-profiles.json','protocol/processing-chains.json','protocol/live-evidence.json','protocol/mode-pilot.json','protocol/mode-evidence.json','build-manifest.json')) {
         if (!$entries.ContainsKey($required)) { throw "Missing portable dependency: $required" }
     }
     $manifestStream = $entries['build-manifest.json'].Open()

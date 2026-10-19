@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCES = ['protocol/commands.json', 'protocol/live-evidence.json', 'protocol/processing-chains.json', 'protocol/device-profiles.json']
+SOURCES = ['protocol/commands.json', 'protocol/live-evidence.json', 'protocol/processing-chains.json', 'protocol/device-profiles.json', 'protocol/mode-pilot.json', 'protocol/mode-evidence.json']
 REQUESTS = [
     ('Capabilities', 'Customize/SupportControl', 'GETSUPPORT', ['Customize/SupportInfo'], 'query capabilities; no hardware control'),
     ('FanStatus', 'Fan/Control', 'GETSTATUS', ['Fan/Status'], 'query current configuration; values are not live watts'),
@@ -50,10 +50,16 @@ def build():
                       'percent' if f in ('CpuUsage','GpuUsage','CpuFanDuty','GpuFanDuty','BatteryLifePercent') else
                       'rpm' if f in ('CpuFanRpm','GpuFanRpm') else 'unconfirmed or encoded'} for f, t in sorted(fields.items())},
                        'evidence': references, 'freshness': 'retained=cached; live ages on monotonic clock; >15 seconds stale; disconnected=history'})
+    pilot = inputs['protocol/mode-pilot.json']
+    controls = [{'id': name, 'topic': 'Fan/Control', 'action': action, 'enabled': pilot['verified'] and str(code) in pilot['observedConfigurations'], 'qos': 0, 'retain': False,
+                 'acOnly': True, 'evidence': 'protocol/mode-evidence.json', 'restoreScope': 'original mode and reported audited configuration fields only',
+                 'gate': 'same audited profile and exact configuration, current capabilities, AC, saved baseline, same connection, explicit action',
+                 'businessAck': 'two consistent fresh readbacks; not a server operation ACK; no CAS'}
+                for code, name, action in [(0, 'Office', 'OPERATING_OFFICE_MODE'), (1, 'Balanced', 'OPERATING_GAMING_MODE'), (2, 'Turbo', 'OPERATING_TURBO_MODE'), (3, 'Custom', 'OPERATING_CUSTOM_MODE')]]
     return {'schemaVersion': 1, 'sourceHashFormat': 'UTF-8 without BOM, LF newlines',
             'sources': [{'path': p, 'sha256': hashlib.sha256((ROOT / p).read_text(encoding='utf-8-sig').encode('utf-8')).hexdigest()} for p in SOURCES],
             'scope': 'audited local machine only; handler metadata is not recovered handler logic',
-            'requests': requests, 'subscriptions': topics,
+            'requests': requests, 'controlRequests': controls, 'modePilotPolicy': 'protocol/mode-pilot.json', 'subscriptions': topics,
             'machineProfiles': 'protocol/device-profiles.json', 'processingChains': 'protocol/processing-chains.json',
             'timing': {'pingSeconds': 10, 'configurationRefreshSeconds': 15, 'staleSeconds': 15, 'capabilityLeaseSeconds': 45},
             'blocked': ['System_OFF', 'raw publish', 'driver access', 'remote hosts', 'automatic reconnect or control replay']}
@@ -70,7 +76,7 @@ def main():
             raise SystemExit('Evidence registry is stale; run scripts/build-evidence-registry.py')
     else:
         path.write_text(text, encoding='utf-8', newline='\n')
-    print('Evidence registry verified: 3 allowed requests, 4 blocked mode commands, 7 subscriptions.')
+    print('Evidence registry verified: 3 read requests, 4 independently gated pilot actions, 7 subscriptions; historical sender catalog is not an executable allowlist.')
 
 
 if __name__ == '__main__':

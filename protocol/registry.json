@@ -17,6 +17,14 @@
     {
       "path": "protocol/device-profiles.json",
       "sha256": "3e04fad3c727f97320440dde7d1976c01accddd4e32e7287857c714c55d4d432"
+    },
+    {
+      "path": "protocol/mode-pilot.json",
+      "sha256": "30dc461155b6a6ed5798902a732fc087764278cd947c56414ad996acf93c7fb2"
+    },
+    {
+      "path": "protocol/mode-evidence.json",
+      "sha256": "7263c91dbbf5495a9a438e13878d773b54533d590796a769d05745095c9fe02a"
     }
   ],
   "scope": "audited local machine only; handler metadata is not recovered handler logic",
@@ -141,6 +149,61 @@
       "reason": "mode-dependent cooling/power coupling and recovery unverified"
     }
   ],
+  "controlRequests": [
+    {
+      "id": "Office",
+      "topic": "Fan/Control",
+      "action": "OPERATING_OFFICE_MODE",
+      "enabled": true,
+      "qos": 0,
+      "retain": false,
+      "acOnly": true,
+      "evidence": "protocol/mode-evidence.json",
+      "restoreScope": "original mode and reported audited configuration fields only",
+      "gate": "same audited profile and exact configuration, current capabilities, AC, saved baseline, same connection, explicit action",
+      "businessAck": "two consistent fresh readbacks; not a server operation ACK; no CAS"
+    },
+    {
+      "id": "Balanced",
+      "topic": "Fan/Control",
+      "action": "OPERATING_GAMING_MODE",
+      "enabled": true,
+      "qos": 0,
+      "retain": false,
+      "acOnly": true,
+      "evidence": "protocol/mode-evidence.json",
+      "restoreScope": "original mode and reported audited configuration fields only",
+      "gate": "same audited profile and exact configuration, current capabilities, AC, saved baseline, same connection, explicit action",
+      "businessAck": "two consistent fresh readbacks; not a server operation ACK; no CAS"
+    },
+    {
+      "id": "Turbo",
+      "topic": "Fan/Control",
+      "action": "OPERATING_TURBO_MODE",
+      "enabled": true,
+      "qos": 0,
+      "retain": false,
+      "acOnly": true,
+      "evidence": "protocol/mode-evidence.json",
+      "restoreScope": "original mode and reported audited configuration fields only",
+      "gate": "same audited profile and exact configuration, current capabilities, AC, saved baseline, same connection, explicit action",
+      "businessAck": "two consistent fresh readbacks; not a server operation ACK; no CAS"
+    },
+    {
+      "id": "Custom",
+      "topic": "Fan/Control",
+      "action": "OPERATING_CUSTOM_MODE",
+      "enabled": true,
+      "qos": 0,
+      "retain": false,
+      "acOnly": true,
+      "evidence": "protocol/mode-evidence.json",
+      "restoreScope": "original mode and reported audited configuration fields only",
+      "gate": "same audited profile and exact configuration, current capabilities, AC, saved baseline, same connection, explicit action",
+      "businessAck": "two consistent fresh readbacks; not a server operation ACK; no CAS"
+    }
+  ],
+  "modePilotPolicy": "protocol/mode-pilot.json",
   "subscriptions": [
     {
       "topic": "Customize/SupportInfo",

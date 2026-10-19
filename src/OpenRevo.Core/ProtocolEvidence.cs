@@ -24,6 +24,16 @@ public static class ProtocolEvidence
         }
         if (!root.GetProperty("subscriptions").EnumerateArray().Select(r => r.GetProperty("topic").GetString())
                 .SequenceEqual(ReadProtocol.Topics)) throw new InvalidDataException("Evidence subscription drift.");
+        var controls = root.GetProperty("controlRequests").EnumerateArray().ToArray();
+        if (controls.Length != Enum.GetValues<PilotMode>().Length) throw new InvalidDataException("Unexpected pilot action count.");
+        foreach (var mode in Enum.GetValues<PilotMode>())
+        {
+            var row = controls.Single(r => r.GetProperty("id").GetString() == mode.ToString());
+            var action = ModePilotPolicy.Action(mode);
+            if (row.GetProperty("topic").GetString() != "Fan/Control" || row.GetProperty("action").GetString() != action
+                || row.GetProperty("enabled").GetBoolean() != ModePilotPolicy.Allows(mode) || row.GetProperty("qos").GetInt32() != 0
+                || row.GetProperty("retain").GetBoolean() || !row.GetProperty("acOnly").GetBoolean()) throw new InvalidDataException("Pilot contract drift.");
+        }
         return root.Clone();
     }
 }

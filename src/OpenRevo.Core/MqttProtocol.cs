@@ -86,6 +86,12 @@ internal static class MqttWire
         return Frame(0x30, [.. String(topic), .. json]); // QoS=0, retain=false
     }
 
+    internal static byte[] Mode(PilotMode mode)
+    {
+        var action = ModePilotPolicy.Action(mode);
+        return Frame(0x30, [.. String("Fan/Control"), .. Utf8.GetBytes(JsonSerializer.Serialize(new { Action = action }))]);
+    }
+
     internal static async Task<Packet> ReadAsync(Stream stream, CancellationToken cancellationToken)
     {
         var one = new byte[1];

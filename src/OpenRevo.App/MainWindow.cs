@@ -33,6 +33,15 @@ public sealed class MainWindow : Window
     private readonly TextBlock _capAge = Text("等待能力响应", 13);
     private readonly TextBlock _diagnosticText = Text("尚无异常诊断", 13);
     private readonly List<MonitoringDiagnostic> _diagnostics = [];
+    private readonly Button _officeMode = new() { Content = "切到办公", MinWidth = 112 };
+    private readonly Button _balancedMode = new() { Content = "切到均衡", MinWidth = 112 };
+    private readonly Button _turboMode = new() { Content = "切到狂暴", MinWidth = 112 };
+    private readonly Button _customMode = new() { Content = "切到自定义", MinWidth = 120 };
+    private readonly Button _restoreMode = new() { Content = "恢复原模式", MinWidth = 124 };
+    private readonly TextBlock _pilotState = Text("等待本机实时状态", 14);
+    private readonly TextBlock _pilotBaseline = Text("尚未记录切换基线", 13);
+    private readonly TextBlock _previousPilot = Text("", 13);
+    private static string PilotJournalPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OpenRevo", "mode-pilot-journal.json");
     private InstallationReport? _inspection;
     private bool _exporting;
     private readonly InfoBar _error = new() { IsOpen = false, IsClosable = false, Severity = InfoBarSeverity.Warning };
@@ -84,6 +93,7 @@ public sealed class MainWindow : Window
         _navigation.MenuItems.Add(Nav("设备概览", "overview", Symbol.Home));
         _navigation.MenuItems.Add(Nav("硬件能力", "capabilities", Symbol.AllApps));
         _navigation.MenuItems.Add(Nav("原始状态", "raw", Symbol.Document));
+        _navigation.MenuItems.Add(Nav("模式试点", "pilot", Symbol.Play));
         _navigation.FooterMenuItems.Add(Nav("连接与外观", "settings", Symbol.Setting));
         _navigation.SelectionChanged += (_, e) =>
         {
@@ -95,6 +105,7 @@ public sealed class MainWindow : Window
         _pages["capabilities"] = CapabilitiesPage();
         _pages["raw"] = RawPage();
         _pages["settings"] = SettingsPage();
+        _pages["pilot"] = PilotPage();
         Content = _root;
         _navigation.SelectedItem = _navigation.MenuItems[0];
         _metrics.SizeChanged += (_, _) => LayoutMetrics();
@@ -106,6 +117,11 @@ public sealed class MainWindow : Window
             if (!_closed) _connect.IsEnabled = true;
         };
         _refresh.Click += (_, _) => _observer?.RequestRefresh();
+        _officeMode.Click += async (_, _) => await OperateModeAsync(PilotMode.Office, false);
+        _balancedMode.Click += async (_, _) => await OperateModeAsync(PilotMode.Balanced, false);
+        _turboMode.Click += async (_, _) => await OperateModeAsync(PilotMode.Turbo, false);
+        _customMode.Click += async (_, _) => await OperateModeAsync(PilotMode.Custom, false);
+        _restoreMode.Click += async (_, _) => await OperateModeAsync(default, true);
         ToolTipService.SetToolTip(_refresh, "重新查询状态并请求传感器采样 (Ctrl+R)");
         _timer.Tick += (_, _) => Render();
         _timer.Start();
@@ -278,7 +294,7 @@ public sealed class MainWindow : Window
         policy.Children.Add(Text("连接范围", 18, true));
         policy.Children.Add(Text("仅连接本机厂商后台。启动时核对主板、BIOS 与服务文件，版本不匹配时停止连接。"));
         policy.Children.Add(Text("监测会启用厂商后台的共享采样计时器。断开只结束本应用的连接，不发送全局停止请求，以免影响原厂监控。"));
-        policy.Children.Add(Text("当前开放状态读取与诊断导出。风扇曲线、电池阈值、屏幕色彩、功耗和超频写入尚未开放。"));
+        policy.Children.Add(Text("当前开放状态读取、诊断导出与受限的四模式切换试点。风扇曲线、电池阈值、屏幕色彩、功耗和超频写入尚未开放。"));
         panel.Children.Add(Card(policy));
         var diagnostics = new StackPanel { Spacing = 12 };
         diagnostics.Children.Add(Text("连接诊断", 18, true));
@@ -286,6 +302,54 @@ public sealed class MainWindow : Window
         diagnostics.Children.Add(Text("关闭窗口会保存 last-session.json；导出诊断包含识别结果、会话阶段和各主题新鲜度。", 12));
         panel.Children.Add(Card(diagnostics));
         return new ScrollViewer { Content = panel, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
+    }
+
+    private UIElement PilotPage()
+    {
+        var panel = Section("模式试点", "支持办公、均衡、狂暴和原厂已保存的自定义配置；切换后可显式恢复原模式。");
+        panel.Children.Add(Text("切换会联动功耗与风扇策略。需接通电源，且当前配置与本机审计记录匹配。", 14));
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        actions.Children.Add(_officeMode); actions.Children.Add(_balancedMode); actions.Children.Add(_turboMode); actions.Children.Add(_customMode); actions.Children.Add(_restoreMode);
+        panel.Children.Add(actions);
+        panel.Children.Add(Text("自定义使用原厂当前已保存的配置；本版不编辑配置参数或风扇曲线。", 13));
+        var state = new StackPanel { Spacing = 12 };
+        state.Children.Add(_pilotState); state.Children.Add(_pilotBaseline); panel.Children.Add(Card(state));
+        panel.Children.Add(Text("每次只发送一条模式命令，再等待两次一致回读。恢复原模式需单独点击；不会在断线、关闭或重连后自动执行。", 13));
+        panel.Children.Add(Text("原厂程序仍可能改变配置。出现结果不明或外部变化时停止写入，请用原厂界面核对保存的基线。", 13));
+        panel.Children.Add(_previousPilot);
+        try
+        {
+            if (File.Exists(PilotJournalPath) && new FileInfo(PilotJournalPath).Length <= 65536)
+            {
+                using var previous = JsonDocument.Parse(File.ReadAllText(PilotJournalPath));
+                var phase = previous.RootElement.GetProperty("Phase").GetString();
+                if (phase is not ("Restored" or "Idle"))
+                    _previousPilot.Text = "上次试点未确认完整恢复。恢复记录保留在本机 mode-pilot-journal.json；本次连接不会重放旧操作，请先在原厂界面核对。";
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException or KeyNotFoundException)
+        { _previousPilot.Text = "无法读取上次恢复记录；请在原厂界面核对当前配置。"; }
+        return new ScrollViewer { Content = panel, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
+    }
+
+    private async Task OperateModeAsync(PilotMode mode, bool restore)
+    {
+        var observer = _observer;
+        if (observer is null || !_connected) return;
+        try
+        {
+            var operation = restore ? observer.Pilot.RestoreAsync() : observer.Pilot.SwitchAsync(mode);
+            Render();
+            var result = await operation;
+            if (_closed || observer != _observer) return;
+            _pilotState.Text = result.Detail;
+            Render();
+        }
+        catch (Exception exception)
+        {
+            var diagnostic = MonitoringDiagnostic.From(exception); AddDiagnostic(diagnostic);
+            _pilotState.Text = "模式操作未完成；请用原厂界面核对基线。"; Render();
+        }
     }
 
     private void ShowPage(string tag)
@@ -298,6 +362,8 @@ public sealed class MainWindow : Window
         if (_closed || _session is { IsCompleted: false }) return;
         _stop?.Dispose(); _stop = new CancellationTokenSource();
         _observer = new BridgeObserver(); _connected = false; _samples.Clear(); _received = 0;
+        _observer.Pilot.SetJournalWriter(journal => DiagnosticFile.Write(PilotJournalPath,
+            JsonSerializer.Serialize(journal, new JsonSerializerOptions { WriteIndented = true, Converters = { new JsonStringEnumConverter() } })));
         _installation = null; _inspection = null; _identity.Text = "正在读取本机身份与安装指纹…";
         _capabilityKey = ""; _rawKey = "";
         _error.IsOpen = false; _connection.Text = "正在连接本机服务…"; _connect.Content = "断开";
@@ -373,6 +439,24 @@ public sealed class MainWindow : Window
     private void Render()
     {
         _refresh.IsEnabled = _connected;
+        var pilot = _observer?.Pilot;
+        _officeMode.IsEnabled = _connected && pilot?.CanSwitchTo(PilotMode.Office) == true;
+        _balancedMode.IsEnabled = _connected && pilot?.CanSwitchTo(PilotMode.Balanced) == true;
+        _turboMode.IsEnabled = _connected && pilot?.CanSwitchTo(PilotMode.Turbo) == true;
+        _customMode.IsEnabled = _connected && pilot?.CanSwitchTo(PilotMode.Custom) == true;
+        _restoreMode.IsEnabled = _connected && pilot?.CanRestore == true;
+        if (pilot is not null)
+        {
+            var journal = pilot.Journal;
+            _pilotState.Text = (journal.Phase switch
+            {
+                PilotPhase.Idle => "就绪", PilotPhase.Preparing => "准备", PilotPhase.Sending => "发送中",
+                PilotPhase.AwaitingReadback => "等待回读", PilotPhase.Applied => "已切换", PilotPhase.Restoring => "恢复中",
+                PilotPhase.Restored => "已恢复", PilotPhase.Uncertain => "结果不确定", _ => "连接已中断"
+            }) + " · " + journal.Detail;
+            _pilotBaseline.Text = journal.Baseline is null ? "尚未记录基线。按钮不可用时，请刷新并确认供电、实时能力和已审计配置。" :
+                $"原模式：{DeviceAudit.ModeName(journal.BaselineMode)}\n原 CPU 配置：PL1 {journal.Baseline.Text("CPU_PL1")} / PL2 {journal.Baseline.Text("CPU_PL2")}\n原 GPU TGP 配置：{journal.Baseline.Text("GPU_ConfigurableTGPTarget")}\n原风扇表：{journal.Baseline.Text("FAN_TableName")}";
+        }
         var latest = _diagnostics.LastOrDefault();
         var missing = ReadProtocol.Topics.Where(topic => !_samples.ContainsKey(topic));
         _diagnosticText.Text = $"会话阶段：{_observer?.Phase ?? MonitorPhase.Idle}\n已接收 {_received} 条消息\n尚未收到：{string.Join("、", missing)}\n" +
@@ -385,7 +469,9 @@ public sealed class MainWindow : Window
         { "True" or "true" => "已接通电源", "False" or "false" => "使用电池供电", _ => "供电状态待确认" });
         UpdateMetric("cpuFan", fan, Number(fan, "CpuFanRpm", " RPM", 0, 20000), $"占空比 {Number(fan, "CpuFanDuty", "%", 0, 100)}");
         UpdateMetric("gpuFan", fan, Number(fan, "GpuFanRpm", " RPM", 0, 20000), $"占空比 {Number(fan, "GpuFanDuty", "%", 0, 100)}");
-        UpdateMetric("mode", mode, DeviceAudit.ModeName(mode?.Text("OperatingMode")), "状态读取 · 未开放模式切换");
+        var effectiveMode = mode?.Text("OperatingMode") ?? pilot?.CurrentMode;
+        UpdateMetric("mode", mode, DeviceAudit.ModeName(effectiveMode), mode?.Text("OperatingMode") is null && effectiveMode is not null
+            ? "模式由已审计配置识别；原始字段保留 null" : "四模式切换见模式页面");
         _configuration.Text = mode is null ? "等待厂商配置状态" : $"CPU PL1  {mode.Text("CPU_PL1") ?? "—"}    PL2  {mode.Text("CPU_PL2") ?? "—"}    PL4  {mode.Text("CPU_PL4") ?? "—"}\nGPU TGP  {mode.Text("GPU_ConfigurableTGPTarget") ?? "—"}    DynamicBoost  {mode.Text("GPU_DynamicBoost") ?? "—"}\n{Age(mode)}";
         var warning = DeviceAudit.TgpInconsistency(mode); _rangeWarning.IsOpen = warning is not null; _rangeWarning.Message = warning ?? "";
         if (_page == "capabilities") RenderCapabilities();
@@ -428,7 +514,8 @@ public sealed class MainWindow : Window
         topicHealth = ReadProtocol.Topics.Select(topic => new { topic, received = _samples.ContainsKey(topic),
             freshness = Sample(topic)?.Freshness(TimeProvider.System, _connected).ToString() ?? "Missing",
             ageSeconds = Sample(topic)?.Age().TotalSeconds }).ToArray(),
-        hardwareWritesImplemented = false, receivedCount = _received,
+        hardwareWritesImplemented = ModePilotPolicy.Enabled, directHardwareAccessImplemented = false, receivedCount = _received,
+        modePilotImplemented = true, modePilot = _observer?.Pilot.Journal,
         requests = _observer?.Requests, samples = _samples.Values.OrderBy(s => s.Topic).ToArray()
     }, new JsonSerializerOptions { WriteIndented = true, Converters = { new JsonStringEnumConverter() } });
 

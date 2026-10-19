@@ -4,8 +4,11 @@
     <RootNamespace>OpenRevo.Core</RootNamespace>
   </PropertyGroup>
   <ItemGroup><InternalsVisibleTo Include="OpenRevo.Tests" /></ItemGroup>
+  <ItemGroup><InternalsVisibleTo Include="OpenRevo.Probe" /></ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="..\..\protocol\device-profiles.json" LogicalName="OpenRevo.device-profiles.json" />
     <EmbeddedResource Include="..\..\protocol\registry.json" LogicalName="OpenRevo.registry.json" />
+    <EmbeddedResource Include="..\..\protocol\mode-pilot.json" LogicalName="OpenRevo.mode-pilot.json" />
+    <EmbeddedResource Include="..\..\protocol\mode-evidence.json" LogicalName="OpenRevo.mode-evidence.json" />
   </ItemGroup>
 </Project>

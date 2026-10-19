@@ -346,6 +346,142 @@ AsyncTest("rejected subscription has a distinct diagnostic and no queries", asyn
     await server; Check(observer.Requests.Count == 0 && observer.LastDiagnostic?.Code == DiagnosticCode.SubscriptionRejected);
 });
 
+Test("pilot names follow current UI while GAMING remains the wire identifier", () =>
+{
+    Check(DeviceAudit.ModeName("0") == "办公模式" && DeviceAudit.ModeName("1") == "均衡模式"
+        && DeviceAudit.ModeName("2") == "狂暴模式" && DeviceAudit.ModeName("3") == "自定义模式");
+    Check(Encoding.UTF8.GetString(MqttWire.Mode(PilotMode.Balanced)).Contains("OPERATING_GAMING_MODE"));
+    Check(MqttWire.Mode(PilotMode.Office)[0] == 0x30);
+    Check(Encoding.UTF8.GetString(MqttWire.Mode(PilotMode.Turbo)).Contains("OPERATING_TURBO_MODE"));
+    Check(Encoding.UTF8.GetString(MqttWire.Mode(PilotMode.Custom)).Contains("OPERATING_CUSTOM_MODE"));
+    Reject<ArgumentOutOfRangeException>(() => MqttWire.Mode((PilotMode)4));
+});
+
+TopicSample PilotStatus(int mode, bool ac = true, bool changed = false)
+{
+    var values = ModePilotPolicy.ConfigurationFields.ToDictionary(f => f, f => (object)$"m{mode}-{f}");
+    values["OperatingMode"] = mode.ToString(); values["IsAC"] = ac;
+    if (changed) values["CPU_PL1"] = "external-change";
+    return Sample("Fan/Status", JsonSerializer.Serialize(values));
+}
+
+async Task PilotCase(string scenario)
+{
+    var mode = scenario == "noop" ? 1 : 0;
+    var writes = new List<PilotMode>(); var saved = new List<ModeJournal>();
+    var pilot = new ModePilot(TimeProvider.System, true, scenario is "timeout" or "missing" ? TimeSpan.FromMilliseconds(250) : null);
+    var cap = supportJson[..^1] + ",\"FanSettingsSupport\":1}";
+    pilot.SetJournalWriter(j =>
+    {
+        if (scenario == "disk" && j.Phase == PilotPhase.Sending) throw new IOException("test full disk");
+        saved.Add(j);
+    });
+    pilot.Bind((target, _) =>
+    {
+        pilot.CheckSending(); Check(saved.Last().Phase is PilotPhase.Sending or PilotPhase.Restoring);
+        Check(ModePilotPolicy.Complete(saved.Last().Baseline), "Baseline must precede every write");
+        writes.Add(target); if (scenario != "timeout") mode = (int)target;
+        return Task.CompletedTask;
+    }, _ =>
+    {
+        if (scenario != "missing")
+        {
+            pilot.Observe(Sample("Customize/SupportInfo", cap));
+            if (scenario == "null-mode")
+            {
+                pilot.Observe(Sample("Tray/Status", JsonSerializer.Serialize(new { OperatingMode = mode, IsAC = true })));
+                var status = PilotStatus(mode);
+                var payload = JsonSerializer.Deserialize<Dictionary<string, object?>>(status.Payload.GetRawText())!;
+                if (mode == 1) payload["OperatingMode"] = null;
+                pilot.Observe(Sample("Fan/Status", JsonSerializer.Serialize(payload)));
+            }
+            else pilot.Observe(PilotStatus(mode, scenario != "dc"));
+        }
+        return Task.CompletedTask;
+    }, () => true, default);
+    var firstTask = pilot.SwitchAsync(PilotMode.Balanced);
+    if (scenario == "busy") Check(!(await pilot.SwitchAsync(PilotMode.Office)).Succeeded);
+    var first = await firstTask;
+    if (scenario is "disk" or "missing" or "dc") { Check(!first.Succeeded && writes.Count == 0); return; }
+    if (scenario == "noop") { Check(first.Succeeded && writes.Count == 0); return; }
+    if (scenario == "timeout")
+    {
+        Check(!first.Succeeded && pilot.Journal.Phase == PilotPhase.Uncertain && writes.Count == 1);
+        Check(!(await pilot.RestoreAsync()).Succeeded && writes.Count == 1); return;
+    }
+    Check(first.Succeeded && pilot.Journal.Phase == PilotPhase.Applied && writes.SequenceEqual(new[] { PilotMode.Balanced }));
+    if (scenario == "external")
+    {
+        pilot.Observe(PilotStatus(mode, true, true));
+        Check(pilot.Journal.Phase == PilotPhase.Uncertain && !(await pilot.RestoreAsync()).Succeeded && writes.Count == 1); return;
+    }
+    if (scenario == "disconnect")
+    {
+        pilot.End(); Check(pilot.Journal.Phase == PilotPhase.Interrupted);
+        Check(!(await pilot.RestoreAsync()).Succeeded && writes.Count == 1); return;
+    }
+    var restored = await pilot.RestoreAsync();
+    Check(restored.Succeeded && pilot.Journal.Phase == PilotPhase.Restored);
+    Check(writes.SequenceEqual(new[] { PilotMode.Balanced, PilotMode.Office }));
+    Check(ModePilotPolicy.SameConfiguration(pilot.Journal.Baseline, restored.Snapshot));
+}
+AsyncTest("pilot snapshots baseline, verifies target twice, explicitly restores configuration", () => PilotCase("roundtrip"));
+AsyncTest("pilot rejects double-click rather than queueing another mode write", () => PilotCase("busy"));
+AsyncTest("pilot refuses DC before any write", () => PilotCase("dc"));
+AsyncTest("pilot refuses a journal failure before any write", () => PilotCase("disk"));
+AsyncTest("pilot refuses missing fresh responses before any write", () => PilotCase("missing"));
+AsyncTest("pilot no-op sends no mode command", () => PilotCase("noop"));
+AsyncTest("pilot uncertain outcome never retries or blindly restores", () => PilotCase("timeout"));
+AsyncTest("pilot detects external configuration change and refuses overwrite", () => PilotCase("external"));
+AsyncTest("pilot connection end preserves baseline but prevents restore replay", () => PilotCase("disconnect"));
+AsyncTest("balanced null Fan mode is corroborated by fresh Tray status without modifying raw payload", () => PilotCase("null-mode"));
+
+Test("production mode policy requires all observed fields and preserves null mode", () =>
+{
+    var config = ModePilotPolicy.Evidence.GetProperty("observedConfigurations").GetProperty("1");
+    var sample = Sample("Fan/Status", config.GetRawText());
+    Check(ModePilotPolicy.Enabled && ModePilotPolicy.AuditedMode(sample) == "1");
+    var values = JsonSerializer.Deserialize<Dictionary<string, object?>>(config.GetRawText())!;
+    values["OperatingMode"] = null;
+    Check(ModePilotPolicy.AuditedMode(Sample("Fan/Status", JsonSerializer.Serialize(values))) == "1");
+    values.Remove("IsAC");
+    Check(ModePilotPolicy.AuditedMode(Sample("Fan/Status", JsonSerializer.Serialize(values))) is null);
+});
+Test("configuration comparison detects changes outside the required field subset", () =>
+{
+    var a = PilotStatus(0);
+    var values = JsonSerializer.Deserialize<Dictionary<string, object?>>(a.Payload.GetRawText())!;
+    values["AdditionalSetting"] = 1;
+    Check(!ModePilotPolicy.SameConfiguration(a, Sample("Fan/Status", JsonSerializer.Serialize(values))));
+});
+
+async Task ProductionModeCase(PilotMode baseline, PilotMode target, bool changedProfile = false, bool turboSupported = true)
+{
+    var mode = baseline; var writes = new List<PilotMode>();
+    var pilot = new ModePilot(TimeProvider.System);
+    pilot.SetJournalWriter(_ => { });
+    pilot.Bind((selected, _) => { pilot.CheckSending(); writes.Add(selected); mode = selected; return Task.CompletedTask; }, _ =>
+    {
+        pilot.Observe(Sample("Customize/SupportInfo", supportJson[..^1] + ",\"FanSettingsSupport\":1,\"TurboModeSupport\":" + (turboSupported ? "1}" : "0}")));
+        var payload = JsonSerializer.Deserialize<Dictionary<string, object?>>(ModePilotPolicy.Evidence.GetProperty("observedConfigurations").GetProperty(((int)mode).ToString()).GetRawText())!;
+        if (changedProfile) payload["CustomProfileIndex"] = "99";
+        pilot.Observe(Sample("Fan/Status", JsonSerializer.Serialize(payload)));
+        return Task.CompletedTask;
+    }, () => true, default);
+    var result = await pilot.SwitchAsync(target);
+    if (changedProfile || !turboSupported) { Check(!result.Succeeded && writes.Count == 0); return; }
+    Check(result.Succeeded && pilot.Journal.ConfirmedMode == ((int)target).ToString());
+    Check((await pilot.RestoreAsync()).Succeeded && pilot.Journal.Phase == PilotPhase.Restored);
+    Check(writes.SequenceEqual(new[] { target, baseline }));
+    Check(ModePilotPolicy.SameConfiguration(pilot.Journal.Baseline, pilot.Journal.Confirmed));
+}
+AsyncTest("production office-turbo-office uses audited configurations", () => ProductionModeCase(PilotMode.Office, PilotMode.Turbo));
+AsyncTest("production office-saved-custom-office uses audited configurations", () => ProductionModeCase(PilotMode.Office, PilotMode.Custom));
+AsyncTest("production restores an original turbo baseline", () => ProductionModeCase(PilotMode.Turbo, PilotMode.Balanced));
+AsyncTest("production restores an original saved custom baseline", () => ProductionModeCase(PilotMode.Custom, PilotMode.Office));
+AsyncTest("changed OEM custom profile index prevents any mode write", () => ProductionModeCase(PilotMode.Office, PilotMode.Custom, true));
+AsyncTest("turbo capability unavailable prevents any turbo write", () => ProductionModeCase(PilotMode.Office, PilotMode.Turbo, turboSupported: false));
+
 var failures = new List<string>();
 foreach (var test in cases)
 {
