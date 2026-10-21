@@ -12,13 +12,16 @@ internal sealed record ObserverTiming(TimeSpan Pulse, TimeSpan Ping, TimeSpan Re
 }
 
 /// <summary>
-/// One finite session; exact subscriptions and three audited read requests only.
+/// One finite session; audited queries and typed, separately gated mode commands.
 /// Does not expose raw publish, remote hosts, driver access or automatic reconnect.
 /// </summary>
 public sealed class BridgeObserver
 {
     private readonly ConcurrentQueue<RequestTrace> _trace = new();
     private int _refresh;
+    private int _suspending;
+    private CancellationTokenSource? _sessionStop;
+    public SessionHealth Health { get; }
     private readonly TimeProvider _clock;
     private readonly ObserverTiming _timing;
     public MonitorPhase Phase { get; private set; }
@@ -26,8 +29,21 @@ public sealed class BridgeObserver
     public ModePilot Pilot { get; }
     public BridgeObserver() : this(TimeProvider.System, ObserverTiming.Default) { }
     internal BridgeObserver(TimeProvider clock, ObserverTiming timing, bool auditModes = false)
-    { _clock = clock; _timing = timing; Pilot = new ModePilot(clock, auditModes); }
+    { _clock = clock; _timing = timing; Pilot = new ModePilot(clock, auditModes); Health = new SessionHealth(clock); }
     public IReadOnlyList<RequestTrace> Requests => _trace.ToArray();
+    public void NotifyPowerSource(bool ac)
+    {
+        Health.RecordEvent("WindowsPowerSource", ac ? "Windows：交流电" : "Windows：电池");
+        Pilot.UpdatePowerSource(ac);
+    }
+    public void NotifySuspend()
+    {
+        Interlocked.Exchange(ref _suspending, 1);
+        Health.RecordEvent("Suspending", "系统即将休眠，结束当前连接；不恢复或重放模式命令");
+        Pilot.End();
+        try { Volatile.Read(ref _sessionStop)?.Cancel(); } catch (ObjectDisposedException) { }
+    }
+    public void NotifyResume() => Health.RecordEvent("Resumed", "系统已唤醒；需要时手动重新连接");
     public void RequestRefresh() => Interlocked.Exchange(ref _refresh, 1);
 
     public Task ObserveAsync(BridgeInstallation installation, Action<TopicSample> onMessage, Action<string> onState,
@@ -40,6 +56,7 @@ public sealed class BridgeObserver
         if (!IPAddress.IsLoopback(endpoint.Address)) throw new InvalidOperationException("Only loopback is supported.");
         Interlocked.Exchange(ref _refresh, 0);
         LastDiagnostic = null;
+        Health.Begin();
         Phase = MonitorPhase.Connecting;
         var lease = new TelemetryLease(_clock, _timing.CapabilityLifetime);
         try
@@ -49,6 +66,8 @@ public sealed class BridgeObserver
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         using var writeLock = new SemaphoreSlim(1, 1);
         var token = lifetime.Token;
+        Volatile.Write(ref _sessionStop, lifetime);
+        if (Volatile.Read(ref _suspending) != 0) lifetime.Cancel();
         using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(token))
         {
             timeout.CancelAfter(TimeSpan.FromSeconds(5));
@@ -67,6 +86,7 @@ public sealed class BridgeObserver
         {
             if (request == ReadRequest.EnableTelemetry && !lease.Demand()) return;
             await Send(MqttWire.Query(request), caller ?? token);
+            Health.Request(request);
             var (topic, action) = ReadProtocol.Describe(request);
             _trace.Enqueue(new(DateTimeOffset.UtcNow, topic, action));
             while (_trace.Count > 256) _trace.TryDequeue(out _);
@@ -121,6 +141,7 @@ public sealed class BridgeObserver
                         break;
                     case 3:
                         var sample = MqttWire.ParsePublish(packet, _clock.GetUtcNow()) with { ReceivedTimestamp = _clock.GetTimestamp() };
+                        Health.Observe(sample);
                         onMessage(sample);
                         var firstCapability = subscribed && lease.Observe(sample);
                         Pilot.Observe(sample);
@@ -190,10 +211,12 @@ public sealed class BridgeObserver
             catch (Exception ex) when (ex is IOException or SocketException or OperationCanceledException or InvalidDataException or ObjectDisposedException or MonitoringException) { }
         }
         }
+        catch (OperationCanceledException) when (Volatile.Read(ref _suspending) != 0)
+        { LastDiagnostic = MonitoringDiagnostic.Create(DiagnosticCode.SystemSuspended); throw new MonitoringException(DiagnosticCode.SystemSuspended); }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         { LastDiagnostic = MonitoringDiagnostic.Create(DiagnosticCode.Cancelled); throw; }
         catch (Exception exception) { LastDiagnostic = MonitoringDiagnostic.From(exception); throw; }
-        finally { Phase = MonitorPhase.Stopped; Pilot.End(); }
+        finally { Volatile.Write(ref _sessionStop, null); Phase = MonitorPhase.Stopped; Pilot.End(); Health.Stop(LastDiagnostic?.Code); }
     }
 
     private static FileStream AcquireSlot()

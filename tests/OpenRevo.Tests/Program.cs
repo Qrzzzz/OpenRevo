@@ -180,6 +180,7 @@ AsyncTest("loopback session sends only audited queries and receives status befor
     Check(receivedQueries.Count == 3 && receivedQueries[0].Contains("GETSUPPORT") && receivedQueries[1].Contains("GETSTATUS") && receivedQueries[2].Contains("System_ON"));
     Check(receivedSamples.Count == 3 && receivedSamples[^1].Number("CpuTemperature") == 58);
     Check(observer.Requests.Count == 3 && !JsonSerializer.Serialize(observer.Requests).Contains("test-password"));
+    Check(observer.Health.Snapshot(false).StopReason == DiagnosticCode.ConnectionClosed && observer.Health.Snapshot(false).SamplingRequests == 1);
 });
 AsyncTest("rejected authentication does not subscribe or publish", async () =>
 {
@@ -381,6 +382,7 @@ async Task PilotCase(string scenario)
         pilot.CheckSending(); Check(saved.Last().Phase is PilotPhase.Sending or PilotPhase.Restoring);
         Check(ModePilotPolicy.Complete(saved.Last().Baseline), "Baseline must precede every write");
         writes.Add(target); if (scenario != "timeout") mode = (int)target;
+        if (scenario == "os-during") pilot.UpdatePowerSource(false);
         return Task.CompletedTask;
     }, _ =>
     {
@@ -404,12 +406,17 @@ async Task PilotCase(string scenario)
     var first = await firstTask;
     if (scenario is "disk" or "missing" or "dc") { Check(!first.Succeeded && writes.Count == 0); return; }
     if (scenario == "noop") { Check(first.Succeeded && writes.Count == 0); return; }
-    if (scenario == "timeout")
+    if (scenario is "timeout" or "os-during")
     {
         Check(!first.Succeeded && pilot.Journal.Phase == PilotPhase.Uncertain && writes.Count == 1);
         Check(!(await pilot.RestoreAsync()).Succeeded && writes.Count == 1); return;
     }
     Check(first.Succeeded && pilot.Journal.Phase == PilotPhase.Applied && writes.SequenceEqual(new[] { PilotMode.Balanced }));
+    if (scenario == "os-after")
+    {
+        pilot.UpdatePowerSource(false); pilot.UpdatePowerSource(true);
+        Check(pilot.Journal.Phase == PilotPhase.Uncertain && !(await pilot.RestoreAsync()).Succeeded && writes.Count == 1); return;
+    }
     if (scenario == "external")
     {
         pilot.Observe(PilotStatus(mode, true, true));
@@ -481,6 +488,201 @@ AsyncTest("production restores an original turbo baseline", () => ProductionMode
 AsyncTest("production restores an original saved custom baseline", () => ProductionModeCase(PilotMode.Custom, PilotMode.Office));
 AsyncTest("changed OEM custom profile index prevents any mode write", () => ProductionModeCase(PilotMode.Office, PilotMode.Custom, true));
 AsyncTest("turbo capability unavailable prevents any turbo write", () => ProductionModeCase(PilotMode.Office, PilotMode.Turbo, turboSupported: false));
+
+Test("missing or quiet sensors are advisory and preserve per-topic freshness", () =>
+{
+    var clock = new TestClock(); var health = new SessionHealth(clock); health.Begin();
+    void Observe(string topic, string json, bool retained = false)
+    {
+        clock.WallClock = DateTimeOffset.UnixEpoch.AddSeconds(clock.GetElapsedTime(0).TotalSeconds);
+        health.Observe(Sample(topic, json, retained) with { ReceivedAtUtc = clock.GetUtcNow(), ReceivedTimestamp = clock.GetTimestamp() });
+    }
+    Observe("System/CpuInfo", "{\"CpuTemperature\":58}", true);
+    Observe("Fan/Status", "{\"IsAC\":true}");
+    clock.Advance(TimeSpan.FromSeconds(40)); Observe("Customize/SupportInfo", supportJson);
+    var state = health.Snapshot(true);
+    Check(state.SensorNotice.Contains("CpuInfo") && state.Topics.Single(t => t.Topic == "System/CpuInfo").Freshness == "Cached");
+    Observe("System/CpuInfo", "{\"CpuTemperature\":58}");
+    var changed = health.Snapshot(true).Topics.Single(t => t.Topic == "System/CpuInfo").LastChangedAtUtc;
+    clock.Advance(TimeSpan.FromSeconds(20)); Observe("System/CpuInfo", "{\"CpuTemperature\":58}");
+    var cpu = health.Snapshot(true).Topics.Single(t => t.Topic == "System/CpuInfo");
+    Check(cpu.LiveReceived == 2 && cpu.MaximumLiveGapSeconds == 20 && cpu.AgeSeconds == 0 && cpu.LastChangedAtUtc == changed);
+    clock.Advance(TimeSpan.FromSeconds(20));
+    Check(health.Snapshot(true).Topics.Single(t => t.Topic == "System/CpuInfo").Freshness == "Stale");
+    Check(health.Snapshot(true).Topics.Single(t => t.Topic == "Customize/SupportInfo").AgeSeconds == 40);
+});
+Test("session counters remain bounded through long simulated monitoring and stop time freezes", () =>
+{
+    var clock = new TestClock(); var health = new SessionHealth(clock); health.Begin();
+    var sample = Sample("System/FanInfo", "{\"CpuFanRpm\":2000}");
+    for (var i = 0; i < 10000; i++)
+    {
+        clock.Advance(TimeSpan.FromSeconds(1));
+        health.Observe(sample with { ReceivedTimestamp = clock.GetTimestamp(), ReceivedAtUtc = clock.GetUtcNow() });
+        if (i % 100 == 0) health.RecordEvent("Test", "bounded event");
+    }
+    health.Request(ReadRequest.EnableTelemetry); health.Request(ReadRequest.FanStatus);
+    health.Stop(DiagnosticCode.Cancelled); var before = health.Snapshot(false); clock.Advance(TimeSpan.FromHours(2));
+    var after = health.Snapshot(false);
+    Check(after.ReceivedMessages == 10000 && after.Topics.Count == 7 && after.Events.Count == 64);
+    Check(after.DurationSeconds == 10000 && before.DurationSeconds == after.DurationSeconds);
+    Check(after.SamplingRequests == 1 && after.SentReadRequests == 2 && after.StopReason == DiagnosticCode.Cancelled);
+});
+Test("vendor power transitions are recorded without cached-state false transitions", () =>
+{
+    var health = new SessionHealth(TimeProvider.System);
+    foreach (var sample in new[] { Sample("Fan/Status", "{\"IsAC\":true}"), Sample("Fan/Status", "{\"IsAC\":false}", true), Sample("Fan/Status", "{\"IsAC\":false}"), Sample("Fan/Status", "{\"IsAC\":true}") }) health.Observe(sample);
+    var events = health.Snapshot(true).Events.Where(e => e.Kind == "VendorPowerSource").ToArray();
+    Check(events.Length == 3 && events[1].Detail.Contains("电池"));
+});
+AsyncTest("OS battery notification prevents a write even while vendor AC state is still fresh", async () =>
+{
+    var pilot = new ModePilot(TimeProvider.System, true); var writes = 0;
+    pilot.SetJournalWriter(_ => { });
+    pilot.Bind((_, _) => { writes++; return Task.CompletedTask; }, _ =>
+    {
+        pilot.Observe(Sample("Customize/SupportInfo", supportJson[..^1] + ",\"FanSettingsSupport\":1}"));
+        pilot.Observe(PilotStatus(0));
+        return Task.CompletedTask;
+    }, () => true, default);
+    pilot.UpdatePowerSource(false);
+    Check(!(await pilot.SwitchAsync(PilotMode.Balanced)).Succeeded && writes == 0);
+});
+AsyncTest("suspend interrupts an established session without mode replay and reports its actual cause", async () =>
+{
+    using var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start();
+    using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+    var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var server = Task.Run(async () =>
+    {
+        using var peer = await listener.AcceptTcpClientAsync(stop.Token); var stream = peer.GetStream();
+        _ = await MqttWire.ReadAsync(stream, stop.Token); await stream.WriteAsync(new byte[] { 0x20, 2, 0, 0 }, stop.Token);
+        _ = await MqttWire.ReadAsync(stream, stop.Token); await stream.WriteAsync(new byte[] { 0x90, 9, 0, 1, 0, 0, 0, 0, 0, 0, 0 }, stop.Token);
+        for (var i = 0; i < 2; i++) _ = await MqttWire.ReadAsync(stream, stop.Token);
+        var cap = Publish("Customize/SupportInfo", supportJson); await stream.WriteAsync(MqttWire.Frame(cap.Header, cap.Body), stop.Token);
+        _ = await MqttWire.ReadAsync(stream, stop.Token); ready.SetResult();
+        Check((await MqttWire.ReadAsync(stream, stop.Token)).Header == 0xe0);
+    });
+    var observer = new BridgeObserver();
+    var monitor = observer.ObserveAtAsync("test", (IPEndPoint)listener.LocalEndpoint, _ => { }, _ => { }, stop.Token, false);
+    await ready.Task.WaitAsync(stop.Token); observer.NotifySuspend();
+    await RejectAsync<MonitoringException>(() => monitor); await server; observer.NotifyResume();
+    Check(observer.LastDiagnostic?.Code == DiagnosticCode.SystemSuspended && observer.Phase == MonitorPhase.Stopped);
+    Check(observer.Requests.Count == 3 && observer.Requests.All(r => !r.Action.StartsWith("OPERATING_")));
+    Check(observer.Health.Snapshot(false).StopReason == DiagnosticCode.SystemSuspended);
+    Check(observer.Health.Snapshot(false).Events.Any(e => e.Kind == "Resumed"));
+});
+
+AsyncTest("OS battery notification during readback stops without retry or restore", () => PilotCase("os-during"));
+AsyncTest("returning to AC after a changed applied session does not replay control", () => PilotCase("os-after"));
+AsyncTest("quiet sensor stream keeps healthy monitoring alive without automatic sampling retries", async () =>
+{
+    using var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start();
+    using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(5)); using var cancel = new CancellationTokenSource();
+    var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var server = Task.Run(async () =>
+    {
+        using var peer = await listener.AcceptTcpClientAsync(stop.Token); var stream = peer.GetStream();
+        _ = await MqttWire.ReadAsync(stream, stop.Token); await stream.WriteAsync(new byte[] { 0x20, 2, 0, 0 }, stop.Token);
+        _ = await MqttWire.ReadAsync(stream, stop.Token); await stream.WriteAsync(new byte[] { 0x90, 9, 0, 1, 0, 0, 0, 0, 0, 0, 0 }, stop.Token);
+        while (true)
+        {
+            var packet = await MqttWire.ReadAsync(stream, stop.Token);
+            if (packet.Header == 0xe0) return;
+            if (packet.Header == 0xc0) await stream.WriteAsync(new byte[] { 0xd0, 0 }, stop.Token);
+            if (packet.Header == 0x30)
+            {
+                var text = Encoding.UTF8.GetString(packet.Body);
+                if (text.Contains("System_ON")) ready.TrySetResult();
+                if (text.Contains("GETSUPPORT"))
+                {
+                    var sample = Publish("Customize/SupportInfo", supportJson);
+                    await stream.WriteAsync(MqttWire.Frame(sample.Header, sample.Body), stop.Token);
+                }
+                if (text.Contains("GETSTATUS"))
+                {
+                    var sample = Publish("Fan/Status", "{\"OperatingMode\":\"0\",\"IsAC\":true}");
+                    await stream.WriteAsync(MqttWire.Frame(sample.Header, sample.Body), stop.Token);
+                }
+            }
+        }
+    });
+    var timing = new ObserverTiming(TimeSpan.FromMilliseconds(20), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(1));
+    var observer = new BridgeObserver(TimeProvider.System, timing);
+    var task = observer.ObserveAtAsync("test", (IPEndPoint)listener.LocalEndpoint, _ => { }, _ => { }, cancel.Token, false);
+    await ready.Task.WaitAsync(stop.Token); await Task.Delay(750, stop.Token);
+    Check(observer.Phase == MonitorPhase.Monitoring && observer.LastDiagnostic is null);
+    Check(observer.Health.Snapshot(true).Topics.Where(t => t.Topic.StartsWith("System/")).All(t => t.LiveReceived == 0));
+    Check(observer.Requests.Count(r => r.Action == "System_ON") == 1 && observer.Requests.All(r => !r.Action.StartsWith("OPERATING_")));
+    cancel.Cancel(); await RejectAsync<OperationCanceledException>(() => task); await server;
+});
+
+AsyncTest("simulated service restart leaves applied control interrupted and reconnect requires fresh capabilities", async () =>
+{
+    using var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start();
+    using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+    var firstReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var secondCached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var allowFresh = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var secondReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    TcpClient? firstPeer = null; var interrupted = false; var mode = 0;
+    var server = Task.Run(async () =>
+    {
+        for (var round = 0; round < 2; round++)
+        {
+            using var peer = await listener.AcceptTcpClientAsync(stop.Token);
+            if (round == 0) firstPeer = peer;
+            var stream = peer.GetStream();
+            _ = await MqttWire.ReadAsync(stream, stop.Token); await stream.WriteAsync(new byte[] { 0x20, 2, 0, 0 }, stop.Token);
+            _ = await MqttWire.ReadAsync(stream, stop.Token); await stream.WriteAsync(new byte[] { 0x90, 9, 0, 1, 0, 0, 0, 0, 0, 0, 0 }, stop.Token);
+            for (var i = 0; i < 2; i++) _ = await MqttWire.ReadAsync(stream, stop.Token);
+            var cap = Publish("Customize/SupportInfo", supportJson[..^1] + ",\"FanSettingsSupport\":1}");
+            await stream.WriteAsync(MqttWire.Frame(round == 1 ? (byte)0x31 : cap.Header, cap.Body), stop.Token);
+            if (round == 1)
+            {
+                secondCached.SetResult(); await allowFresh.Task.WaitAsync(stop.Token);
+                await stream.WriteAsync(MqttWire.Frame(cap.Header, cap.Body), stop.Token);
+            }
+            var status = Publish("Fan/Status", ModePilotPolicy.Evidence.GetProperty("observedConfigurations").GetProperty(mode.ToString()).GetRawText());
+            await stream.WriteAsync(MqttWire.Frame(status.Header, status.Body), stop.Token);
+            try
+            {
+                while (true)
+                {
+                    var packet = await MqttWire.ReadAsync(stream, stop.Token);
+                    if (packet.Header == 0xe0) break;
+                    if (packet.Header == 0xc0) { await stream.WriteAsync(new byte[] { 0xd0, 0 }, stop.Token); continue; }
+                    var text = Encoding.UTF8.GetString(packet.Body);
+                    if (text.Contains("System_ON")) (round == 0 ? firstReady : secondReady).TrySetResult();
+                    if (text.Contains("GETSUPPORT")) await stream.WriteAsync(MqttWire.Frame(cap.Header, cap.Body), stop.Token);
+                    if (text.Contains("OPERATING_GAMING_MODE")) mode = 1;
+                    if (text.Contains("GETSTATUS") || text.Contains("OPERATING_GAMING_MODE"))
+                    {
+                        status = Publish("Fan/Status", ModePilotPolicy.Evidence.GetProperty("observedConfigurations").GetProperty(mode.ToString()).GetRawText());
+                        await stream.WriteAsync(MqttWire.Frame(status.Header, status.Body), stop.Token);
+                    }
+                }
+            }
+            catch (Exception ex) when (round == 0 && interrupted && ex is IOException or SocketException or ObjectDisposedException) { }
+        }
+    });
+    var endpoint = (IPEndPoint)listener.LocalEndpoint;
+    var first = new BridgeObserver(); first.Pilot.SetJournalWriter(_ => { });
+    var original = first.ObserveAtAsync("test", endpoint, _ => { }, _ => { }, stop.Token, false);
+    await firstReady.Task.WaitAsync(stop.Token);
+    Check((await first.Pilot.SwitchAsync(PilotMode.Balanced, stop.Token)).Succeeded);
+    interrupted = true; firstPeer!.Close();
+    await RejectAsync<IOException>(() => original);
+    Check(first.Pilot.Journal.Phase == PilotPhase.Interrupted && first.Requests.Count(r => r.Action.StartsWith("OPERATING_")) == 1);
+    using var cancel = new CancellationTokenSource(); var second = new BridgeObserver(); second.Pilot.SetJournalWriter(_ => { });
+    var reconnected = second.ObserveAtAsync("test", endpoint, _ => { }, _ => { }, cancel.Token, false);
+    await secondCached.Task.WaitAsync(stop.Token); await Task.Delay(75, stop.Token);
+    Check(second.Phase == MonitorPhase.WaitingCapabilities && second.Requests.Count == 2);
+    allowFresh.SetResult(); await secondReady.Task.WaitAsync(stop.Token); await Task.Delay(25, stop.Token);
+    Check(second.Phase == MonitorPhase.Monitoring && !second.Pilot.CanRestore && second.Pilot.CurrentMode == "1");
+    Check(second.Requests.All(r => !r.Action.StartsWith("OPERATING_")) && second.Requests.Count(r => r.Action == "System_ON") == 1);
+    cancel.Cancel(); await RejectAsync<OperationCanceledException>(() => reconnected); await server;
+});
 
 var failures = new List<string>();
 foreach (var test in cases)

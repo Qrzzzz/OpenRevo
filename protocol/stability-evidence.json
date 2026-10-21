@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "version": "0.4.0",
+  "profileId": "mechrevo-yaoshi-x6ar55xy-n118mro24",
+  "automated": {
+    "passed": 69,
+    "total": 69,
+    "sourceSha256": "b09c6da6bafd95aedcf4c9c5383ceeb05fca1cd47667ee71ed92b352e13b0f13"
+  },
+  "continuousObservation": {
+    "source": {
+      "path": ".local/evidence/v040-soak.json",
+      "sha256": "6bec5b1715b19293c7bfd85d96469a3d4246a71eaf6c1ef97296ccd9b37e8b10"
+    },
+    "scope": "0.4 observation CLI candidate, approximately 30 minutes",
+    "durationSeconds": 1799.93423,
+    "receivedMessages": 2141,
+    "trimmedMessages": 0,
+    "readRequests": 239,
+    "samplingRequests": 1,
+    "modeCommands": 0,
+    "topicLiveCounts": {
+      "Customize/SupportInfo": 119,
+      "Fan/Status": 120,
+      "Tray/Status": 1,
+      "System/FanInfo": 894,
+      "System/CpuInfo": 894,
+      "System/GpuInfo": 82,
+      "System/BatteryInfo": 30
+    },
+    "maximumLiveGapsSeconds": {
+      "Customize/SupportInfo": 15.1751761,
+      "Fan/Status": 15.2591521,
+      "Tray/Status": 0,
+      "System/FanInfo": 2.1491817,
+      "System/CpuInfo": 2.0306525,
+      "System/GpuInfo": 176.4542247,
+      "System/BatteryInfo": 61.3919099
+    },
+    "processSamples": 53,
+    "sampledWorkingSetBytes": {
+      "min": 50548736,
+      "max": 56680448
+    }
+  },
+  "duplicateInstance": {
+    "source": {
+      "path": ".local/evidence/v040-duplicate.json",
+      "sha256": "3976c33c9be8e8ca92f3ce873fd0275538eff38fa02b7cb7c392ad59d952f193"
+    },
+    "requests": 0,
+    "result": "SlotOccupied; existing session unaffected"
+  },
+  "physicalPowerAndStandby": {
+    "source": {
+      "path": ".local/evidence/v040-power-standby.json",
+      "sha256": "a49ce9156cbfb203d06a28606a2352c0fab70ca44dd4059d7ebd2915485b424b"
+    },
+    "userObservation": {
+      "path": ".local/evidence/v040-user-observation.json",
+      "sha256": "5a68762501298e1fbc544dcdddb76db5c4bd5399466ec47feeb1bd0cdbc10023"
+    },
+    "standbySource": {
+      "path": ".local/evidence/v040-modern-standby-events.json",
+      "sha256": "c341d747d38eff9f6493807851f37f8f94d031bc6c408d798944ad0bac2ced2b"
+    },
+    "dcButtonsDisabled": true,
+    "standbyMode": "S0 low-power idle, connected network",
+    "standbySeconds": 8.837808,
+    "standbyEnteredAtUtc": "2026-10-21T03:19:47.9618287Z",
+    "standbyExitedAtUtc": "2026-10-21T03:19:56.7996364Z",
+    "connectionPreservedThroughStandby": true,
+    "endReason": "explicit disconnect after observation",
+    "modeCommands": 0,
+    "events": [
+      {
+        "AtUtc": "2026-10-21T03:14:24.5305978+00:00",
+        "Kind": "WindowsPowerSource",
+        "Detail": "Windows：交流电"
+      },
+      {
+        "AtUtc": "2026-10-21T03:14:24.6935559+00:00",
+        "Kind": "VendorPowerSource",
+        "Detail": "厂商状态：交流电"
+      },
+      {
+        "AtUtc": "2026-10-21T03:22:57.492135+00:00",
+        "Kind": "VendorPowerSource",
+        "Detail": "厂商状态：电池"
+      },
+      {
+        "AtUtc": "2026-10-21T03:22:58.4679708+00:00",
+        "Kind": "WindowsPowerSource",
+        "Detail": "Windows：电池"
+      },
+      {
+        "AtUtc": "2026-10-21T03:23:27.2687798+00:00",
+        "Kind": "WindowsPowerSource",
+        "Detail": "Windows：交流电"
+      },
+      {
+        "AtUtc": "2026-10-21T03:23:27.453004+00:00",
+        "Kind": "VendorPowerSource",
+        "Detail": "厂商状态：交流电"
+      }
+    ]
+  },
+  "explicitReconnect": {
+    "source": {
+      "path": ".local/evidence/v040-reconnected.json",
+      "sha256": "5adccf144b4384b7559cafa97ce6d61ff476364d9b1db1bd6d927dfa364bd18d"
+    },
+    "freshCapabilitiesAndSensors": true,
+    "modeCommands": 0
+  },
+  "traditionalSuspend": {
+    "verification": "simulated-only; S3 is unavailable on this host",
+    "expectedStopReason": "SystemSuspended"
+  },
+  "serviceRestart": {
+    "verification": "simulated-only, as requested",
+    "physicalServiceModified": false
+  },
+  "limits": "One audited host; no 24-hour/multiday or firmware fault tests; sampled process memory is not a proof of absence of leaks."
+}

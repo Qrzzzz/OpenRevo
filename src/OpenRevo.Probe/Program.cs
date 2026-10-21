@@ -53,9 +53,10 @@ try
 }
 catch (OperationCanceledException) when (stop.IsCancellationRequested) { }
 catch (Exception ex) { error = observer.LastDiagnostic is { Code: not DiagnosticCode.Cancelled } diagnostic ? diagnostic : MonitoringDiagnostic.From(ex); }
-var report = new { schemaVersion = 2, version = AppVersion.Current, observedAtUtc = DateTimeOffset.UtcNow, device = installation?.Device,
+var report = new { schemaVersion = 3, version = AppVersion.Current, observedAtUtc = DateTimeOffset.UtcNow, device = installation?.Device,
     inspection, bridgeSha256 = installation?.BridgeSha256, serviceSha256 = installation?.ServiceSha256, duration, error,
-    phase = observer.Phase.ToString(), receivedCount = received, droppedMessages = received - messages.Count,
+    phase = observer.Phase.ToString(), receivedCount = received, trimmedMessages = received - messages.Count,
+    sessionHealth = observer.Health.Snapshot(false),
     modePilot = observer.Pilot.Journal, switchResult, restoreResult,
     requests = observer.Requests, messages = messages.ToArray() };
 Directory.CreateDirectory(Path.GetDirectoryName(output)!);

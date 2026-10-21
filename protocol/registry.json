@@ -25,6 +25,10 @@
     {
       "path": "protocol/mode-evidence.json",
       "sha256": "7263c91dbbf5495a9a438e13878d773b54533d590796a769d05745095c9fe02a"
+    },
+    {
+      "path": "protocol/stability-evidence.json",
+      "sha256": "06d29c82c7ae2fffce342651af6085875d05f10caf18ef7e4bc08d1837e73a6d"
     }
   ],
   "scope": "audited local machine only; handler metadata is not recovered handler logic",

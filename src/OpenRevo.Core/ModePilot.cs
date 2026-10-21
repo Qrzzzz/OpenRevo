@@ -75,6 +75,7 @@ public sealed class ModePilot
     private TopicSample? _capabilities, _status, _tray;
     private TopicSample? _expectedBefore;
     private PilotMode _pendingTarget;
+    private bool? _systemAc;
     private long _capSequence, _statusSequence;
     private int _busy;
     private Action<ModeJournal>? _save;
@@ -99,6 +100,15 @@ public sealed class ModePilot
             if (Busy || _status is null || (restore ? _journal.Phase != PilotPhase.Applied : _journal.Phase is not (PilotPhase.Idle or PilotPhase.Restored))) return false;
             try { Require(_status); return !restore || ModePilotPolicy.SameConfiguration(_status, _journal.Confirmed); }
             catch (InvalidOperationException) { return false; }
+        }
+    }
+    public void UpdatePowerSource(bool ac)
+    {
+        lock (_gate)
+        {
+            _systemAc = ac;
+            if (!ac && _journal.Phase == PilotPhase.Applied)
+                Set(PilotPhase.Uncertain, "已切换到电池供电；停止恢复写入，请核对原厂当前配置。", persistRequired: false);
         }
     }
     public void SetJournalWriter(Action<ModeJournal> writer) { lock (_gate) _save = writer; }
@@ -174,7 +184,7 @@ public sealed class ModePilot
         if (_capabilities is null || _capabilities.Freshness(_clock, true) != SampleFreshness.Current
             || !DeviceAudit.MatchesAuditedTelemetry(_capabilities) || _capabilities.Text("FanSettingsSupport") != "1")
             throw new InvalidOperationException("需要当前机型的实时模式能力确认。");
-        if (sample.Freshness(_clock, true) != SampleFreshness.Current || !Ac(sample) || ResolveMode(sample) is null
+        if (_systemAc == false || sample.Freshness(_clock, true) != SampleFreshness.Current || !Ac(sample) || ResolveMode(sample) is null
             || !ModePilotPolicy.Complete(sample)) throw new InvalidOperationException("需接通电源并处于已审计的四种模式之一，且配置完整、新鲜。");
         if (!_audit && !ModePilotPolicy.Audited(sample)) throw new InvalidOperationException("当前配置与实机审计结果不一致，请先重新审计。");
         if (_tray?.Freshness(_clock, true) == SampleFreshness.Current && _tray.Text("OperatingMode") != ResolveMode(sample))
@@ -266,6 +276,7 @@ public sealed class ModePilot
                 token.ThrowIfCancellationRequested();
                 lock (_gate)
                 {
+                    if (_systemAc == false) throw new InvalidOperationException("已切换到电池供电，停止等待并交由原厂界面核对。");
                     if (_statusSequence > sequence && _status is not null)
                     {
                         if (!Ac(_status)) throw new InvalidOperationException("供电已改变，停止等待并交由原厂界面核对。");

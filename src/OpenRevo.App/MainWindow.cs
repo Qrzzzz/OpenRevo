@@ -10,6 +10,9 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using OpenRevo.Core;
+using System.Runtime.InteropServices;
+using PowerManager = Microsoft.Windows.System.Power.PowerManager;
+using Microsoft.Windows.System.Power;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.System;
@@ -31,6 +34,9 @@ public sealed class MainWindow : Window
     private readonly TextBlock _configuration = Text("等待厂商配置状态", 14);
     private readonly TextBlock _identity = Text("正在读取安装与机型信息", 14);
     private readonly TextBlock _capAge = Text("等待能力响应", 13);
+    private readonly TextBlock _sensorNotice = Text("", 13);
+    private readonly Queue<SessionHealthSnapshot> _previousSessions = new();
+    private bool _powerNotificationsAvailable;
     private readonly TextBlock _diagnosticText = Text("尚无异常诊断", 13);
     private readonly List<MonitoringDiagnostic> _diagnostics = [];
     private readonly Button _officeMode = new() { Content = "切到办公", MinWidth = 112 };
@@ -127,11 +133,11 @@ public sealed class MainWindow : Window
         _timer.Start();
         _root.Loaded += (_, _) =>
         {
-            SizeForCurrentDisplay(); UpdateCaptionColors(); StartSession();
+            SizeForCurrentDisplay(); UpdateCaptionColors(); EnablePowerNotifications(); StartSession();
             // Establish XAML focus before the first keyboard accelerator.
             DispatcherQueue.TryEnqueue(() => { if (!_closed) ((NavigationViewItem)_navigation.MenuItems[0]).Focus(FocusState.Programmatic); });
         };
-        Closed += (_, _) => { _closed = true; _connected = false; _timer.Stop(); _stop?.Cancel(); SaveLastSession(); };
+        Closed += (_, _) => { _closed = true; _connected = false; _timer.Stop(); DisablePowerNotifications(); _stop?.Cancel(); SaveLastSession(); };
         var refreshShortcut = new KeyboardAccelerator { Key = VirtualKey.R, Modifiers = VirtualKeyModifiers.Control };
         refreshShortcut.Invoked += (_, e) => { if (_connected) _observer?.RequestRefresh(); e.Handled = true; };
         _root.KeyboardAccelerators.Add(refreshShortcut);
@@ -210,6 +216,7 @@ public sealed class MainWindow : Window
         AddMetric("gpuFan", "GPU 风扇", "\uE9CA");
         AddMetric("mode", "当前模式", "\uE945");
         panel.Children.Add(_metrics);
+        panel.Children.Add(_sensorNotice);
         var config = new StackPanel { Spacing = 10 };
         config.Children.Add(Text("当前功耗配置", 16, true));
         config.Children.Add(_configuration);
@@ -299,7 +306,7 @@ public sealed class MainWindow : Window
         var diagnostics = new StackPanel { Spacing = 12 };
         diagnostics.Children.Add(Text("连接诊断", 18, true));
         diagnostics.Children.Add(_diagnosticText);
-        diagnostics.Children.Add(Text("关闭窗口会保存 last-session.json；导出诊断包含识别结果、会话阶段和各主题新鲜度。", 12));
+        diagnostics.Children.Add(Text("关闭窗口会保存 last-session.json；导出诊断包含识别结果、会话统计、主题收包数、供电与休眠事件。", 12));
         panel.Children.Add(Card(diagnostics));
         return new ScrollViewer { Content = panel, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
     }
@@ -357,16 +364,60 @@ public sealed class MainWindow : Window
         _page = tag; _navigation.Content = _pages[tag]; Render();
     }
 
+    private void EnablePowerNotifications()
+    {
+        try
+        {
+            PowerManager.PowerSourceKindChanged += PowerSourceChanged;
+            PowerManager.SystemSuspendStatusChanged += SuspendStatusChanged;
+            _powerNotificationsAvailable = true;
+        }
+        catch (Exception ex) when (ex is COMException or NotSupportedException)
+        {
+            DisablePowerNotifications();
+            AddDiagnostic(MonitoringDiagnostic.Create(DiagnosticCode.PowerNotificationsUnavailable));
+        }
+    }
+    private void DisablePowerNotifications()
+    {
+        PowerManager.PowerSourceKindChanged -= PowerSourceChanged;
+        PowerManager.SystemSuspendStatusChanged -= SuspendStatusChanged;
+    }
+    private void PowerSourceChanged(object? sender, object args)
+    {
+        _observer?.NotifyPowerSource(PowerManager.PowerSourceKind == PowerSourceKind.AC);
+        DispatcherQueue.TryEnqueue(() => { if (!_closed) Render(); });
+    }
+    private void SuspendStatusChanged(object? sender, object args)
+    {
+        var status = PowerManager.SystemSuspendStatus;
+        if (status == SystemSuspendStatus.Entering) _observer?.NotifySuspend();
+        else if (status is SystemSuspendStatus.AutoResume or SystemSuspendStatus.ManualResume) _observer?.NotifyResume();
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (_closed) return;
+            if (status is SystemSuspendStatus.AutoResume or SystemSuspendStatus.ManualResume)
+                _connection.Text = _observer?.Phase == MonitorPhase.Monitoring ? "系统已唤醒 · 监测中" : "系统已唤醒；需要时点击重新连接";
+            Render(); SaveLastSession();
+        });
+    }
     private void StartSession()
     {
         if (_closed || _session is { IsCompleted: false }) return;
         _stop?.Dispose(); _stop = new CancellationTokenSource();
-        _observer = new BridgeObserver(); _connected = false; _samples.Clear(); _received = 0;
+        if (_observer is not null)
+        {
+            _previousSessions.Enqueue(_observer.Health.Snapshot(false));
+            while (_previousSessions.Count > 8) _previousSessions.Dequeue();
+        }
+        _observer = new BridgeObserver();
+        if (_powerNotificationsAvailable) _observer.NotifyPowerSource(PowerManager.PowerSourceKind == PowerSourceKind.AC);
+        _connected = false; _samples.Clear(); _received = 0;
         _observer.Pilot.SetJournalWriter(journal => DiagnosticFile.Write(PilotJournalPath,
             JsonSerializer.Serialize(journal, new JsonSerializerOptions { WriteIndented = true, Converters = { new JsonStringEnumConverter() } })));
         _installation = null; _inspection = null; _identity.Text = "正在读取本机身份与安装指纹…";
         _capabilityKey = ""; _rawKey = "";
-        _error.IsOpen = false; _connection.Text = "正在连接本机服务…"; _connect.Content = "断开";
+        _error.IsOpen = false; _error.Severity = InfoBarSeverity.Warning; _connection.Text = "正在连接本机服务…"; _connect.Content = "断开";
         _session = RunSessionAsync(_observer, ++_generation, _stop.Token);
     }
 
@@ -407,8 +458,8 @@ public sealed class MainWindow : Window
             {
                 _connected = false; _connection.Text = failure is null ? "已断开 · 保留上次收到的值" : "连接未完成或已中断";
                 _connect.Content = "重新连接"; _connect.IsEnabled = true;
-                if (failure is not null) { _error.Title = $"无法继续监测 · {failure.Code}"; _error.Message = failure.Message + "\n" + failure.NextStep; _error.IsOpen = true; }
-                Render();
+                if (failure is not null) { _error.Severity = failure.Code == DiagnosticCode.SystemSuspended ? InfoBarSeverity.Informational : InfoBarSeverity.Warning; _error.Title = failure.Code == DiagnosticCode.SystemSuspended ? "系统休眠 · 连接已结束" : $"无法继续监测 · {failure.Code}"; _error.Message = failure.Message + "\n" + failure.NextStep; _error.IsOpen = true; }
+                Render(); SaveLastSession();
             }
         }
     }
@@ -439,6 +490,9 @@ public sealed class MainWindow : Window
     private void Render()
     {
         _refresh.IsEnabled = _connected;
+        var health = _observer?.Health.Snapshot(_connected);
+        _sensorNotice.Text = health?.SensorNotice ?? "";
+        _sensorNotice.Visibility = string.IsNullOrEmpty(_sensorNotice.Text) ? Visibility.Collapsed : Visibility.Visible;
         var pilot = _observer?.Pilot;
         _officeMode.IsEnabled = _connected && pilot?.CanSwitchTo(PilotMode.Office) == true;
         _balancedMode.IsEnabled = _connected && pilot?.CanSwitchTo(PilotMode.Balanced) == true;
@@ -459,7 +513,7 @@ public sealed class MainWindow : Window
         }
         var latest = _diagnostics.LastOrDefault();
         var missing = ReadProtocol.Topics.Where(topic => !_samples.ContainsKey(topic));
-        _diagnosticText.Text = $"会话阶段：{_observer?.Phase ?? MonitorPhase.Idle}\n已接收 {_received} 条消息\n尚未收到：{string.Join("、", missing)}\n" +
+        _diagnosticText.Text = $"会话阶段：{_observer?.Phase ?? MonitorPhase.Idle}\n会话时长：{health?.DurationSeconds / 60:0.#} 分钟\n已接收 {_received} 条消息\n尚未收到：{string.Join("、", missing)}\n" +
             (latest is null ? "暂无异常" : $"最近诊断：{latest.Code}\n{latest.Message}\n{latest.NextStep}");
         var cpu = Sample("System/CpuInfo"); var gpu = Sample("System/GpuInfo");
         var fan = Sample("System/FanInfo"); var battery = Sample("System/BatteryInfo"); var mode = Sample("Fan/Status");
@@ -507,10 +561,12 @@ public sealed class MainWindow : Window
 
     private string Diagnostics() => JsonSerializer.Serialize(new
     {
-        schemaVersion = 2, application = "OpenRevo", version = AppVersion.Current, exportedAtUtc = DateTimeOffset.UtcNow, connected = _connected,
+        schemaVersion = 3, application = "OpenRevo", version = AppVersion.Current, exportedAtUtc = DateTimeOffset.UtcNow, connected = _connected,
         device = _installation?.Device, bridgeSha256 = _installation?.BridgeSha256, serviceSha256 = _installation?.ServiceSha256,
         inspection = _inspection, phase = _closed ? "Closed" : _observer?.Phase.ToString(), diagnostics = _diagnostics.ToArray(),
         protocolSchemaVersion = ProtocolEvidence.Registry.GetProperty("schemaVersion").GetInt32(),
+        sessionHealth = _observer?.Health.Snapshot(_connected), previousSessions = _previousSessions.ToArray(),
+        powerNotificationsAvailable = _powerNotificationsAvailable,
         topicHealth = ReadProtocol.Topics.Select(topic => new { topic, received = _samples.ContainsKey(topic),
             freshness = Sample(topic)?.Freshness(TimeProvider.System, _connected).ToString() ?? "Missing",
             ageSeconds = Sample(topic)?.Age().TotalSeconds }).ToArray(),

@@ -8,7 +8,7 @@ public enum DiagnosticCode
     UnsupportedDevice, InstallationNotFound, ServiceVersionMismatch, CredentialFormat,
     InstallationAccessDenied, ServiceUnavailable, AuthenticationRejected, SubscriptionRejected,
     CapabilityRevoked, CapabilityExpired, ResponseTimeout, ConnectionClosed, ProtocolViolation,
-    SlotOccupied, Cancelled, ExportFailed, UnexpectedFailure
+    SlotOccupied, Cancelled, ExportFailed, UnexpectedFailure, SystemSuspended, PowerNotificationsUnavailable
 }
 
 public sealed record MonitoringDiagnostic(DiagnosticCode Code, string Message, string NextStep, DateTimeOffset AtUtc)
@@ -29,6 +29,8 @@ public sealed record MonitoringDiagnostic(DiagnosticCode Code, string Message, s
         DiagnosticCode.ConnectionClosed => "厂商服务已关闭连接。",
         DiagnosticCode.ProtocolViolation => "收到不符合已审计协议的数据，已停止读取。",
         DiagnosticCode.SlotOccupied => "已有 OpenRevo 会话占用本机连接。",
+        DiagnosticCode.SystemSuspended => "系统休眠，已结束本次监控连接。",
+        DiagnosticCode.PowerNotificationsUnavailable => "无法接收 Windows 电源通知，状态监测仍可使用。",
         DiagnosticCode.Cancelled => "本次监控已结束。",
         DiagnosticCode.ExportFailed => "无法保存本地诊断文件。",
         _ => "监控遇到未分类错误。"
@@ -38,6 +40,8 @@ public sealed record MonitoringDiagnostic(DiagnosticCode Code, string Message, s
         DiagnosticCode.SlotOccupied => "先断开另一个 OpenRevo 窗口或读取器，再重新连接。",
         DiagnosticCode.CapabilityRevoked or DiagnosticCode.CapabilityExpired => "核对厂商后台状态；确认后手动重新连接。",
         DiagnosticCode.ExportFailed => "选择可写目录，或查看连接与诊断页中的保存结果。",
+        DiagnosticCode.SystemSuspended => "唤醒后点击重新连接；不会重放此前的模式命令。",
+        DiagnosticCode.PowerNotificationsUnavailable => "可继续使用厂商供电状态；唤醒后若连接中断，请手动重新连接。",
         DiagnosticCode.Cancelled => "需要时手动重新连接。",
         _ => "检查本机厂商服务和诊断记录，再手动重新连接。"
     }, DateTimeOffset.UtcNow);
