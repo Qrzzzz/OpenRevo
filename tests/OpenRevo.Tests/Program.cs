@@ -25,6 +25,47 @@ Packet Publish(string topic, string json, byte header = 0x30)
 }
 var supportJson = """{"ProjectID":26,"CustomizeTarget":56,"BIOS_PROJECT_ID":"IDY","SystemMonitorSupport":1,"ServiceReady":1,"IsAMDPlatform":0,"IsNvGpu":1,"ColorCalibrationSupport":4,"LiquidCoolingSupport":0}""";
 
+Test("UI bursts keep only the latest seven topic snapshots without losing message counts", () =>
+{
+    var buffer = new UiSampleBuffer();
+    for (var i = 0; i < 10000; i++)
+        foreach (var topic in ReadProtocol.Topics) buffer.Offer(Sample(topic, $"{{\"sequence\":{i}}}"));
+    buffer.Offer(Sample("Unknown/Status", "{}"));
+    var batch = buffer.Drain();
+    Check(batch.Received == 10000L * ReadProtocol.Topics.Count && batch.Samples.Count == ReadProtocol.Topics.Count);
+    Check(batch.Samples.All(s => s.Number("sequence") == 9999));
+    Check(buffer.Drain() is { Received: 0, Samples.Count: 0 });
+});
+Test("visual delivery preserves source timestamps and retained state and isolates reconnections", () =>
+{
+    var oldConnection = new UiSampleBuffer(); var newConnection = new UiSampleBuffer();
+    var cached = Sample("Fan/Status", "{}", true) with { ReceivedTimestamp = 900 };
+    newConnection.Offer(cached);
+    oldConnection.Offer(Sample("Fan/Status", """{"OperatingMode":2}"""));
+    var batch = newConnection.Drain();
+    Check(batch.Received == 1 && batch.Samples.Single() == cached);
+    Check(batch.Samples.Single().Retained && batch.Samples.Single().ReceivedTimestamp == 900);
+    Check(oldConnection.Drain().Received == 1 && newConnection.Drain().Received == 0);
+});
+AsyncTest("concurrent visual producers and draining preserve complete accounting", async () =>
+{
+    var buffer = new UiSampleBuffer();
+    var sample = Sample("System/CpuInfo", """{"Temperature":65}""");
+    var producers = Enumerable.Range(0, 4).Select(_ => Task.Run(() =>
+    {
+        for (var i = 0; i < 5000; i++) buffer.Offer(sample);
+    })).ToArray();
+    var writing = Task.WhenAll(producers); long received = 0;
+    while (!writing.IsCompleted)
+    {
+        var batch = buffer.Drain(); received += batch.Received;
+        Check(batch.Samples.Count <= 1);
+        await Task.Yield();
+    }
+    await writing; received += buffer.Drain().Received;
+    Check(received == 20000 && buffer.Drain().Received == 0);
+});
+
 Test("UI preferences survive restart independently of device configuration", () =>
 {
     var directory = Path.Combine(Path.GetTempPath(), "OpenRevo-preferences-" + Guid.NewGuid().ToString("N"));

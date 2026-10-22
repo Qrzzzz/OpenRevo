@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using Microsoft.UI;
 using Microsoft.UI.Text;
 using Microsoft.UI.Windowing;
+using Microsoft.UI.System;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Automation.Peers;
@@ -17,6 +18,7 @@ using Microsoft.Windows.System.Power;
 using Windows.Storage.Pickers;
 using Windows.System;
 using Windows.UI.Text;
+using Windows.UI.ViewManagement;
 
 namespace OpenRevo.App;
 
@@ -28,6 +30,7 @@ public sealed partial class MainWindow : Window
     private readonly List<Border> _metricCards = [];
     private readonly Dictionary<string, (TextBlock Value, TextBlock Detail, TextBlock Age)> _metricText = [];
     private readonly Dictionary<string, TopicSample> _samples = new(StringComparer.Ordinal);
+    private UiSampleBuffer _pendingSamples = new();
     private readonly Dictionary<string, UIElement> _pages = [];
     private readonly TextBlock _connection = Text("尚未连接", 13);
     private readonly TextBlock _device = Text("正在识别本机设备", 14);
@@ -71,6 +74,8 @@ public sealed partial class MainWindow : Window
     private BridgeObserver? _observer;
     private CancellationTokenSource? _stop;
     private Task? _session;
+    private bool _sessionActive;
+    private bool _stopping;
     private bool _connected;
     private bool _closed;
     private string _page = "overview";
@@ -78,6 +83,8 @@ public sealed partial class MainWindow : Window
     private string _rawKey = "";
     private long _received;
     private int _generation;
+    private ThemeSettings? _themeSettings;
+    private readonly UISettings _uiSettings = new();
 
     public MainWindow()
     {
@@ -131,7 +138,11 @@ public sealed partial class MainWindow : Window
         _connect.Click += async (_, _) =>
         {
             _connect.IsEnabled = false;
-            if (_session is { IsCompleted: false }) { _stop?.Cancel(); await _session; }
+            if (_session is { IsCompleted: false })
+            {
+                _stopping = true; _connected = false; _stop?.Cancel(); Render();
+                await _session;
+            }
             else StartSession();
             if (!_closed) _connect.IsEnabled = true;
         };
@@ -162,6 +173,8 @@ public sealed partial class MainWindow : Window
         {
             if (_started) return;
             _started = true;
+            _themeSettings = ThemeSettings.CreateForWindowId(AppWindow.Id);
+            _themeSettings.Changed += HighContrastChanged;
             RestoreWindowPlacement(); UpdateCaptionColors(); EnablePowerNotifications(); StartSession();
             // Establish XAML focus before the first keyboard accelerator.
             DispatcherQueue.TryEnqueue(() => { if (!_closed) ((NavigationViewItem)_navigation.MenuItems[0]).Focus(FocusState.Programmatic); });
@@ -182,16 +195,20 @@ public sealed partial class MainWindow : Window
     private void UpdateCaptionColors()
     {
         var light = _root.ActualTheme == ElementTheme.Light;
-        var foreground = light ? Colors.Black : Colors.White;
+        var highContrast = _themeSettings?.HighContrast == true;
+        var foreground = highContrast ? _uiSettings.GetColorValue(UIColorType.Foreground) : light ? Colors.Black : Colors.White;
         var titleBar = AppWindow.TitleBar;
         titleBar.ButtonForegroundColor = foreground;
         titleBar.ButtonHoverForegroundColor = foreground;
         titleBar.ButtonPressedForegroundColor = foreground;
-        titleBar.ButtonInactiveForegroundColor = light
+        titleBar.ButtonInactiveForegroundColor = highContrast ? foreground : light
             ? Windows.UI.Color.FromArgb(255, 96, 96, 96) : Windows.UI.Color.FromArgb(255, 170, 170, 170);
         titleBar.ButtonBackgroundColor = Colors.Transparent;
         titleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
     }
+
+    private void HighContrastChanged(ThemeSettings sender, object args) =>
+        DispatcherQueue.TryEnqueue(() => { if (!_closed) UpdateCaptionColors(); });
 
     private static TextBlock Text(string text, double size = 14, bool semibold = false) => new()
     { Text = text, FontSize = size, TextWrapping = TextWrapping.Wrap, FontWeight = semibold ? FontWeights.SemiBold : FontWeights.Normal };
@@ -469,6 +486,8 @@ public sealed partial class MainWindow : Window
             while (_previousSessions.Count > 8) _previousSessions.Dequeue();
         }
         _observer = new BridgeObserver();
+        _pendingSamples = new UiSampleBuffer();
+        _sessionActive = true; _stopping = false;
         if (_powerNotificationsAvailable) _observer.NotifyPowerSource(PowerManager.PowerSourceKind == PowerSourceKind.AC);
         _connected = false; _samples.Clear(); _received = 0;
         _observer.Pilot.SetJournalWriter(journal => DiagnosticFile.Write(PilotJournalPath,
@@ -476,10 +495,11 @@ public sealed partial class MainWindow : Window
         _installation = null; _inspection = null; _identity.Text = "正在读取本机身份与安装指纹…";
         _capabilityKey = ""; _rawKey = "";
         _error.IsOpen = false; _error.Severity = InfoBarSeverity.Warning; _connection.Text = "正在连接本机服务…"; _connect.Content = "断开";
-        _session = RunSessionAsync(_observer, ++_generation, _stop.Token);
+        _session = RunSessionAsync(_observer, _pendingSamples, ++_generation, _stop.Token);
+        Render();
     }
 
-    private async Task RunSessionAsync(BridgeObserver observer, int generation, CancellationToken token)
+    private async Task RunSessionAsync(BridgeObserver observer, UiSampleBuffer pending, int generation, CancellationToken token)
     {
         MonitoringDiagnostic? failure = null;
         try
@@ -499,19 +519,21 @@ public sealed partial class MainWindow : Window
             }
             _device.Text = DeviceCaption(_installation.Device);
             _identity.Text += $"\n桥接文件  {_installation.BridgeSha256[..12]}…\n核心文件  {_installation.ServiceSha256[..12]}…";
-            await Task.Run(() => observer.ObserveAsync(_installation, sample => DispatcherQueue.TryEnqueue(() =>
+            await Task.Run(() => observer.ObserveAsync(_installation, pending.Offer, state => DispatcherQueue.TryEnqueue(() =>
             {
-                if (_closed || generation != _generation) return;
-                _samples[sample.Topic] = sample; _received++; Render();
-            }), state => DispatcherQueue.TryEnqueue(() =>
-            {
-                if (_closed || generation != _generation) return; _connected = true; _connection.Text = state;
+                if (_closed || generation != _generation || !_sessionActive || token.IsCancellationRequested) return;
+                _connected = true; _connection.Text = state; Render();
             }), token), token);
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception ex) { failure = observer.LastDiagnostic ?? MonitoringDiagnostic.From(ex); AddDiagnostic(failure); }
         finally
         {
+            if (generation == _generation)
+            {
+                DrainSamples();
+                _sessionActive = false; _stopping = false;
+            }
             if (!_closed && generation == _generation)
             {
                 _connected = false; _connection.Text = failure is null ? "已断开 · 保留上次收到的值" : "连接未完成或已中断";
@@ -547,7 +569,8 @@ public sealed partial class MainWindow : Window
 
     private void Render()
     {
-        _reinspect.IsEnabled = _session is null || _session.IsCompleted;
+        DrainSamples();
+        _reinspect.IsEnabled = !_sessionActive;
         _refresh.IsEnabled = _connected;
         var health = _observer?.Health.Snapshot(_connected);
         _sensorNotice.Text = health?.SensorNotice ?? "";
@@ -638,24 +661,35 @@ public sealed partial class MainWindow : Window
         string.Join("\n", differences.Take(8).Select(d => $"{d.Field}：已验证值 {d.Expected}；实际值 {d.Observed}"))
         + (differences.Count > 8 ? $"\n另有 {differences.Count - 8} 项，完整差异见审计材料。" : "");
 
-    private string Diagnostics() => JsonSerializer.Serialize(new
+    private void DrainSamples()
     {
-        schemaVersion = 4, application = "OpenRevo", version = AppVersion.Current, exportedAtUtc = DateTimeOffset.UtcNow, connected = _connected,
-        device = _installation?.Device, bridgeSha256 = _installation?.BridgeSha256, serviceSha256 = _installation?.ServiceSha256,
-        inspection = _inspection, phase = _closed ? "Closed" : _observer?.Phase.ToString(), diagnostics = _diagnostics.ToArray(),
-        configurationReview = _observer?.Pilot.ConfigurationReview,
-        capabilityReview = AuditReview.Capabilities(Sample("Customize/SupportInfo")),
-        fieldPolicy = AuditReview.Policy,
-        protocolSchemaVersion = ProtocolEvidence.Registry.GetProperty("schemaVersion").GetInt32(),
-        sessionHealth = _observer?.Health.Snapshot(_connected), previousSessions = _previousSessions.ToArray(),
-        powerNotificationsAvailable = _powerNotificationsAvailable,
-        topicHealth = ReadProtocol.Topics.Select(topic => new { topic, received = _samples.ContainsKey(topic),
-            freshness = Sample(topic)?.Freshness(TimeProvider.System, _connected).ToString() ?? "Missing",
-            ageSeconds = Sample(topic)?.Age().TotalSeconds }).ToArray(),
-        hardwareWritesImplemented = ModePilotPolicy.Enabled, directHardwareAccessImplemented = false, receivedCount = _received,
-        modePilotImplemented = true, modePilot = _observer?.Pilot.Journal,
-        requests = _observer?.Requests, samples = _samples.Values.OrderBy(s => s.Topic).ToArray()
-    }, new JsonSerializerOptions { WriteIndented = true, Converters = { new JsonStringEnumConverter() } });
+        var batch = _pendingSamples.Drain();
+        foreach (var sample in batch.Samples) _samples[sample.Topic] = sample;
+        _received += batch.Received;
+    }
+
+    private string Diagnostics()
+    {
+        DrainSamples();
+        return JsonSerializer.Serialize(new
+        {
+            schemaVersion = 4, application = "OpenRevo", version = AppVersion.Current, exportedAtUtc = DateTimeOffset.UtcNow, connected = _connected,
+            device = _installation?.Device, bridgeSha256 = _installation?.BridgeSha256, serviceSha256 = _installation?.ServiceSha256,
+            inspection = _inspection, phase = _closed ? "Closed" : _observer?.Phase.ToString(), diagnostics = _diagnostics.ToArray(),
+            configurationReview = _observer?.Pilot.ConfigurationReview,
+            capabilityReview = AuditReview.Capabilities(Sample("Customize/SupportInfo")),
+            fieldPolicy = AuditReview.Policy,
+            protocolSchemaVersion = ProtocolEvidence.Registry.GetProperty("schemaVersion").GetInt32(),
+            sessionHealth = _observer?.Health.Snapshot(_connected), previousSessions = _previousSessions.ToArray(),
+            powerNotificationsAvailable = _powerNotificationsAvailable,
+            topicHealth = ReadProtocol.Topics.Select(topic => new { topic, received = _samples.ContainsKey(topic),
+                freshness = Sample(topic)?.Freshness(TimeProvider.System, _connected).ToString() ?? "Missing",
+                ageSeconds = Sample(topic)?.Age().TotalSeconds }).ToArray(),
+            hardwareWritesImplemented = ModePilotPolicy.Enabled, directHardwareAccessImplemented = false, receivedCount = _received,
+            modePilotImplemented = true, modePilot = _observer?.Pilot.Journal,
+            requests = _observer?.Requests, samples = _samples.Values.OrderBy(s => s.Topic).ToArray()
+        }, new JsonSerializerOptions { WriteIndented = true, Converters = { new JsonStringEnumConverter() } });
+    }
 
     private async Task ExportAsync()
     {

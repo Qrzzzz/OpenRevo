@@ -105,17 +105,17 @@ public sealed partial class MainWindow
     private void RenderPresentation()
     {
         LayoutPages();
-        var running = _session is { IsCompleted: false };
+        var running = _sessionActive;
         var phase = _observer?.Phase ?? MonitorPhase.Idle;
-        _connectionProgress.IsActive = running && phase != MonitorPhase.Monitoring;
+        _connectionProgress.IsActive = running && (_stopping || phase != MonitorPhase.Monitoring);
         _connectionProgress.Visibility = _connectionProgress.IsActive ? Visibility.Visible : Visibility.Collapsed;
-        _connection.Text = !running ? (_samples.Count == 0 ? "尚未连接" : "已断开 · 显示上次数据") : phase switch
+        _connection.Text = _stopping ? "正在断开连接…" : !running ? (_samples.Count == 0 ? "尚未连接" : "已断开 · 显示上次数据") : phase switch
         {
             MonitorPhase.Connecting => "正在连接", MonitorPhase.Authenticating => "正在验证连接",
             MonitorPhase.Subscribing or MonitorPhase.WaitingCapabilities => "正在获取设备状态",
             MonitorPhase.Monitoring => "已连接 · 正在监测", _ => "正在检测设备"
         };
-        _connect.Content = running ? "断开连接" : "连接设备";
+        _connect.Content = _stopping ? "正在断开…" : running ? "断开连接" : "连接设备";
         _connect.Style = running ? null : (Style)Application.Current.Resources["AccentButtonStyle"];
         _deviceSummary.Text = _inspection is null ? "等待检测结果" :
             _inspection.DeviceMatch == "matched" && _inspection.FileMatch == "matched" ? "设备与后台版本已匹配" : "设备或后台版本尚未匹配，请查看详情";

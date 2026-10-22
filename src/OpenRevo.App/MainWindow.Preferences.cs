@@ -67,6 +67,7 @@ public sealed partial class MainWindow
         _root.IsHitTestVisible = false;
         _timer.Stop();
         DisablePowerNotifications();
+        if (_themeSettings is not null) _themeSettings.Changed -= HighContrastChanged;
         _stop?.Cancel();
         // Finish the observer (including its final journal/health state) before writing the report.
         if (_session is not null) await _session;

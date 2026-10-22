@@ -11,9 +11,9 @@ public partial class App : Application
         UnhandledException += (_, e) =>
         {
             var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OpenRevo");
-            Directory.CreateDirectory(directory);
             try
             {
+                Directory.CreateDirectory(directory);
                 var file = Path.Combine(directory, "crash.log");
                 if (File.Exists(file) && new FileInfo(file).Length > 65536) File.WriteAllText(file, "");
                 var diagnostic = OpenRevo.Core.MonitoringDiagnostic.From(e.Exception);
