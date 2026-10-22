@@ -75,6 +75,14 @@ public sealed partial class MainWindow
         SavePreferences();
         SaveLastSession();
         _stop?.Dispose();
+        if (_exitRequested || !_preferences.StayInTray) DesktopLifetime.StopBackground();
+        else
+        {
+            try { DesktopLifetime.EnsureBackground(); }
+            catch (Exception ex) when (LifetimeFailure(ex)) { /* Closing must still release the UI if the tray cannot start. */ }
+        }
+        DesktopLifetime.RemoveProp(_nativeWindow, DesktopLifetime.UiProperty);
+        if (_lifetimeProcedure is not null) DesktopLifetime.RemoveWindowSubclass(_nativeWindow, _lifetimeProcedure, 1);
         _closeReady = true;
         Close();
     }

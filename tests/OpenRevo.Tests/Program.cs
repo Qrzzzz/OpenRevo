@@ -73,7 +73,7 @@ Test("UI preferences survive restart independently of device configuration", () 
     try
     {
         Check(AppPreferences.Load(path) == new AppPreferences());
-        var settings = new AppPreferences(AppThemePreference.Dark, new WindowBounds(-1800, 40, 1000, 700), true);
+        var settings = new AppPreferences(AppThemePreference.Dark, new WindowBounds(-1800, 40, 1000, 700), true, StayInTray: false);
         settings.Save(path);
         Check(AppPreferences.Load(path) == settings);
         (settings with { Theme = AppThemePreference.Light }).Save(path);
@@ -81,6 +81,28 @@ Test("UI preferences survive restart independently of device configuration", () 
         Check(Directory.GetFiles(directory).Length == 1, "Preference writes must leave no temporary files");
     }
     finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+});
+Test("old preferences retain tray default without opting into Windows startup", () =>
+{
+    var path = Path.GetTempFileName();
+    try
+    {
+        File.WriteAllText(path, """{"Theme":"Dark","Maximized":true}""");
+        var settings = AppPreferences.Load(path);
+        Check(settings.StayInTray && settings.Theme == AppThemePreference.Dark && settings.Maximized);
+        Check(!File.ReadAllText(path).Contains("Startup"));
+    }
+    finally { File.Delete(path); }
+});
+Test("startup command quotes spaces and rejects ambiguous or overlong executable paths", () =>
+{
+    var executable = Path.Combine(Path.GetTempPath(), "Open Revo 中文", "OpenRevo.Background.exe");
+    Check(StartupRegistration.Command(executable) == $"\"{executable}\" --autostart");
+    Check(StartupRegistration.Matches(StartupRegistration.Command(executable).ToUpperInvariant(), executable));
+    Check(!StartupRegistration.Matches(StartupRegistration.Command(executable), Path.Combine(Path.GetTempPath(), "other", "OpenRevo.Background.exe")));
+    Reject<ArgumentException>(() => StartupRegistration.Command("relative.exe"));
+    Reject<ArgumentException>(() => StartupRegistration.Command(executable + '"'));
+    Reject<ArgumentException>(() => StartupRegistration.Command(Path.Combine(Path.GetTempPath(), new string('a', 260), "tray.exe")));
 });
 Test("damaged or unknown UI preferences do not prevent startup", () =>
 {

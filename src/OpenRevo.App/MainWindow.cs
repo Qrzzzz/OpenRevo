@@ -133,6 +133,7 @@ public sealed partial class MainWindow : Window
         _pages["pilot"] = PilotPage();
         _navigation.DisplayModeChanged += (_, _) => LayoutPages();
         Content = _root;
+        AttachDesktopLifetime();
         _navigation.SelectedItem = _navigation.MenuItems[0];
         _metrics.SizeChanged += (_, _) => LayoutMetrics();
         _connect.Click += async (_, _) =>
@@ -320,6 +321,7 @@ public sealed partial class MainWindow : Window
         };
         panel.Children.Add(theme);
         panel.Children.Add(Secondary("主题会自动保存；下次启动会恢复窗口位置、大小及最大化状态。"));
+        panel.Children.Add(LifetimeSettings());
         var identity = new StackPanel { Spacing = 12 };
         identity.Children.Add(Text("设备与连接", 18, true)); identity.Children.Add(_deviceSummary);
         _identity.IsTextSelectionEnabled = true;

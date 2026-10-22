@@ -14,6 +14,7 @@ if ($Publish) {
     $output = Join-Path $root "artifacts\OpenRevo-$version-win-x64"
     if (Test-Path -LiteralPath $output) { throw "发布目录已存在，为避免混合旧文件，请先另存：$output" }
     Invoke-OpenRevoDotnet -Sdk $sdk -ToolArguments @('publish',$project,'-c','Release','-p:Platform=x64','--nologo','-p:RestoreLockedMode=true',$baseOutput,'-o',$output) -Log (Join-Path $logs 'publish.log')
+    & (Join-Path $PSScriptRoot 'build-background.ps1') -OutputDirectory $output
     Copy-Item -LiteralPath (Join-Path $root 'docs\portable-readme.md') -Destination (Join-Path $output 'README.md')
     $docs = Join-Path $output 'docs'
     $protocol = Join-Path $output 'protocol'

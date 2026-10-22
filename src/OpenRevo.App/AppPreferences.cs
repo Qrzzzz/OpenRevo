@@ -27,7 +27,8 @@ internal sealed record WindowBounds(int X, int Y, int Width, int Height)
 
 internal enum AppThemePreference { System, Light, Dark }
 
-internal sealed record AppPreferences(AppThemePreference Theme = AppThemePreference.System, WindowBounds? Window = null, bool Maximized = false)
+internal sealed record AppPreferences(AppThemePreference Theme = AppThemePreference.System, WindowBounds? Window = null, bool Maximized = false,
+    bool StayInTray = true)
 {
     private static readonly JsonSerializerOptions Options = new()
     { WriteIndented = true, Converters = { new JsonStringEnumConverter() } };

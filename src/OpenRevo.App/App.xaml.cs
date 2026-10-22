@@ -5,6 +5,7 @@ namespace OpenRevo.App;
 public partial class App : Application
 {
     private MainWindow? _window;
+    private Mutex? _uiInstance;
     public App()
     {
         InitializeComponent();
@@ -22,9 +23,25 @@ public partial class App : Application
             catch (Exception failure) when (failure is IOException or UnauthorizedAccessException) { }
         };
     }
-    protected override void OnLaunched(LaunchActivatedEventArgs args)
+    protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
+        _uiInstance = new Mutex(false, @"Local\OpenRevo.Ui.v1");
+        var ownsInstance = false;
+        for (var attempt = 0; attempt < 20; attempt++)
+        {
+            try { ownsInstance = _uiInstance.WaitOne(0); }
+            catch (AbandonedMutexException) { ownsInstance = true; }
+            if (ownsInstance || DesktopLifetime.ShowExisting()) break;
+            // The first window may still be loading, or finishing its clean shutdown.
+            await Task.Delay(100);
+        }
+        if (!ownsInstance)
+        {
+            _uiInstance.Dispose(); _uiInstance = null;
+            Exit(); return;
+        }
         _window = new MainWindow();
+        _window.Closed += (_, _) => { _uiInstance.ReleaseMutex(); _uiInstance.Dispose(); _uiInstance = null; };
         _window.Activate();
     }
 }

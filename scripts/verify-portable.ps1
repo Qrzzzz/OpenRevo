@@ -26,7 +26,7 @@ try {
         if ($entries.ContainsKey($relative)) { throw "Duplicate ZIP path: $relative" }
         $entries[$relative] = $entry
     }
-    foreach ($required in @('OpenRevo.exe','OpenRevo.dll','OpenRevo.Core.dll','Microsoft.UI.Xaml.dll','coreclr.dll','hostfxr.dll','README.md','docs/mvp-audit.md',"docs/v$version-audit.md",'docs/processing-chains.md','docs/reaudit.md','docs/ui-guidelines.md','docs/v1.0-acceptance.md','protocol/registry.json','protocol/device-profiles.json','protocol/processing-chains.json','protocol/live-evidence.json','protocol/mode-pilot.json','protocol/mode-evidence.json','protocol/stability-evidence.json','protocol/configuration-policy.json','build-manifest.json')) {
+    foreach ($required in @('OpenRevo.exe','OpenRevo.Background.exe','OpenRevo.dll','OpenRevo.Core.dll','Microsoft.UI.Xaml.dll','coreclr.dll','hostfxr.dll','README.md','docs/mvp-audit.md',"docs/v$version-audit.md",'docs/processing-chains.md','docs/reaudit.md','docs/ui-guidelines.md','docs/v1.0-acceptance.md','protocol/registry.json','protocol/device-profiles.json','protocol/processing-chains.json','protocol/live-evidence.json','protocol/mode-pilot.json','protocol/mode-evidence.json','protocol/stability-evidence.json','protocol/configuration-policy.json','build-manifest.json')) {
         if (!$entries.ContainsKey($required)) { throw "Missing portable dependency: $required" }
     }
     $manifestStream = $entries['build-manifest.json'].Open()
