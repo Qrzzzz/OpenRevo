@@ -1,4 +1,4 @@
-# OpenRevo 0.4.0 本机预览版
+# OpenRevo 0.5.0 本机预览版
 
 解压整个文件夹，双击 `OpenRevo.exe`。请保留文件夹内所有运行文件。无需安装 .NET 或管理员权限。
 
@@ -18,8 +18,10 @@
 
 监测会启用厂商后台的共享采样计时器。断开只结束本应用连接，不发送全局停止请求。关闭窗口会在 `%LOCALAPPDATA%\OpenRevo\last-session.json` 保存最后一轮本地诊断。
 
-本版验证范围及未执行项目见 `docs/v0.4.0-audit.md`，关键链路见 `docs/processing-chains.md`，统一目录见 `protocol/registry.json`。此包为未签名预览构建，后续版本见 https://github.com/Qrzzzz/OpenRevo/releases 。
+本版验证范围及未执行项目见 `docs/v0.5.0-audit.md`，关键链路见 `docs/processing-chains.md`，统一目录见 `protocol/registry.json`。此包为未签名预览构建，后续版本见 https://github.com/Qrzzzz/OpenRevo/releases 。
 
-“模式试点”仅在已审计的交流电和完整配置基线下开放四模式切换。自定义使用原厂已保存的配置；配置索引或参数变化后需要重新审计。切换会联动风扇和功耗配置；恢复需单独点击，并要求同一连接中两次一致回读、所有回报字段回到基线。断线或结果不确定时停止控制，请用原厂界面核对。重启后仅提示旧记录，不重放命令。日志位于 `%LOCALAPPDATA%\OpenRevo\mode-pilot-journal.json`。
+“模式控制”仅在已审计的交流电和完整配置基线下开放四模式切换。自定义使用原厂已保存的配置；配置索引或参数变化后需要重新审计。切换会联动风扇和功耗配置；恢复需单独点击，并要求同一连接中两次一致回读、所有回报字段回到基线。断线或结果不确定时停止控制，请用原厂界面核对。重启后仅提示旧记录，不重放命令。日志位于 `%LOCALAPPDATA%\OpenRevo\mode-pilot-journal.json`。
+
+0.5.0 支持连续切换；每次以切换前配置作为最近恢复基线。选择“保留当前模式”仅结束本次恢复记录，不发送命令；“恢复基线”撤销最近一次切换。Tab／Shift+Tab 移动焦点，Enter／空格操作按钮。
 
 0.4.0 增加会话及主题统计、传感器未更新提示、AC/DC 和睡眠事件记录。传感器静默时仍可查看其他状态并点击刷新；收到传统睡眠通知时结束连接，唤醒后手动重连；联网 S0 待机连接正常时继续监测。电池供电下模式按钮不可用，但监测保持可用。诊断 schemaVersion 为 3。

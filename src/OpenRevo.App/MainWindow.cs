@@ -6,6 +6,7 @@ using Microsoft.UI.Text;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
@@ -43,7 +44,9 @@ public sealed class MainWindow : Window
     private readonly Button _balancedMode = new() { Content = "切到均衡", MinWidth = 112 };
     private readonly Button _turboMode = new() { Content = "切到狂暴", MinWidth = 112 };
     private readonly Button _customMode = new() { Content = "切到自定义", MinWidth = 120 };
-    private readonly Button _restoreMode = new() { Content = "恢复原模式", MinWidth = 124 };
+    private readonly Button _restoreMode = new() { Content = "恢复基线", MinWidth = 124 };
+    private readonly Button _keepMode = new() { Content = "保留当前模式", MinWidth = 124 };
+    private readonly TextBlock _modeResult = Text("", 14);
     private readonly TextBlock _pilotState = Text("等待本机实时状态", 14);
     private readonly TextBlock _pilotBaseline = Text("尚未记录切换基线", 13);
     private readonly TextBlock _previousPilot = Text("", 13);
@@ -99,7 +102,7 @@ public sealed class MainWindow : Window
         _navigation.MenuItems.Add(Nav("设备概览", "overview", Symbol.Home));
         _navigation.MenuItems.Add(Nav("硬件能力", "capabilities", Symbol.AllApps));
         _navigation.MenuItems.Add(Nav("原始状态", "raw", Symbol.Document));
-        _navigation.MenuItems.Add(Nav("模式试点", "pilot", Symbol.Play));
+        _navigation.MenuItems.Add(Nav("模式控制", "pilot", Symbol.Play));
         _navigation.FooterMenuItems.Add(Nav("连接与外观", "settings", Symbol.Setting));
         _navigation.SelectionChanged += (_, e) =>
         {
@@ -128,6 +131,14 @@ public sealed class MainWindow : Window
         _turboMode.Click += async (_, _) => await OperateModeAsync(PilotMode.Turbo, false);
         _customMode.Click += async (_, _) => await OperateModeAsync(PilotMode.Custom, false);
         _restoreMode.Click += async (_, _) => await OperateModeAsync(default, true);
+        _keepMode.Click += (_, _) =>
+        {
+            if (_observer is null || !_connected) return;
+            var result = _observer.Pilot.KeepCurrent();
+            ShowModeResult(result);
+            Render();
+            FocusModeAction();
+        };
         ToolTipService.SetToolTip(_refresh, "重新查询状态并请求传感器采样 (Ctrl+R)");
         _timer.Tick += (_, _) => Render();
         _timer.Start();
@@ -313,30 +324,47 @@ public sealed class MainWindow : Window
 
     private UIElement PilotPage()
     {
-        var panel = Section("模式试点", "支持办公、均衡、狂暴和原厂已保存的自定义配置；切换后可显式恢复原模式。");
+        var panel = Section("模式控制", "支持连续切换办公、均衡、狂暴和原厂已保存的自定义配置。");
         panel.Children.Add(Text("切换会联动功耗与风扇策略。需接通电源，且当前配置与本机审计记录匹配。", 14));
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        actions.Children.Add(_officeMode); actions.Children.Add(_balancedMode); actions.Children.Add(_turboMode); actions.Children.Add(_customMode); actions.Children.Add(_restoreMode);
+        actions.Children.Add(_officeMode); actions.Children.Add(_balancedMode); actions.Children.Add(_turboMode); actions.Children.Add(_customMode);
         panel.Children.Add(actions);
+        var completion = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        completion.Children.Add(_keepMode); completion.Children.Add(_restoreMode); panel.Children.Add(completion);
+        AutomationProperties.SetLiveSetting(_modeResult, AutomationLiveSetting.Polite);
+        panel.Children.Add(_modeResult);
         panel.Children.Add(Text("自定义使用原厂当前已保存的配置；本版不编辑配置参数或风扇曲线。", 13));
         var state = new StackPanel { Spacing = 12 };
         state.Children.Add(_pilotState); state.Children.Add(_pilotBaseline); panel.Children.Add(Card(state));
-        panel.Children.Add(Text("每次只发送一条模式命令，再等待两次一致回读。恢复原模式需单独点击；不会在断线、关闭或重连后自动执行。", 13));
+        panel.Children.Add(Text("可直接继续切换，每次以切换前的配置作为新的基线。保留当前模式不发送命令，并结束本次恢复记录；恢复基线只撤销最近一次切换。关闭、断线和重连均不会自动恢复。", 13));
+        panel.Children.Add(Text("使用 Tab / Shift+Tab 移动焦点，Enter 或空格操作按钮；Ctrl+R 刷新，Ctrl+S 导出诊断。", 13));
         panel.Children.Add(Text("原厂程序仍可能改变配置。出现结果不明或外部变化时停止写入，请用原厂界面核对保存的基线。", 13));
         panel.Children.Add(_previousPilot);
         try
         {
             if (File.Exists(PilotJournalPath) && new FileInfo(PilotJournalPath).Length <= 65536)
             {
-                using var previous = JsonDocument.Parse(File.ReadAllText(PilotJournalPath));
-                var phase = previous.RootElement.GetProperty("Phase").GetString();
-                if (phase is not ("Restored" or "Idle"))
-                    _previousPilot.Text = "上次试点未确认完整恢复。恢复记录保留在本机 mode-pilot-journal.json；本次连接不会重放旧操作，请先在原厂界面核对。";
+                _previousPilot.Text = PreviousModeJournal.Describe(File.ReadAllText(PilotJournalPath));
             }
+            else if (File.Exists(PilotJournalPath)) _previousPilot.Text = "旧模式记录过大，未读取；请核对当前模式。";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException or KeyNotFoundException)
         { _previousPilot.Text = "无法读取上次恢复记录；请在原厂界面核对当前配置。"; }
         return new ScrollViewer { Content = panel, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
+    }
+
+    private void ShowModeResult(ModePilotResult result)
+    {
+        _modeResult.Text = (result.Succeeded ? "完成：" : "未完成：") + result.Detail;
+        if (result.Succeeded) _previousPilot.Text = "当前操作已写入本地记录；旧操作不会重放。";
+        FrameworkElementAutomationPeer.CreatePeerForElement(_modeResult)?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
+    }
+
+    private void FocusModeAction()
+    {
+        var button = new[] { _keepMode, _officeMode, _balancedMode, _turboMode, _customMode }.FirstOrDefault(b => b.IsEnabled);
+        if (button is not null) button.Focus(FocusState.Programmatic);
+        else _navigation.Focus(FocusState.Programmatic);
     }
 
     private async Task OperateModeAsync(PilotMode mode, bool restore)
@@ -345,17 +373,19 @@ public sealed class MainWindow : Window
         if (observer is null || !_connected) return;
         try
         {
+            _modeResult.Text = restore ? "正在恢复最近一次基线…" : "正在切换，请等待回读…";
             var operation = restore ? observer.Pilot.RestoreAsync() : observer.Pilot.SwitchAsync(mode);
             Render();
             var result = await operation;
             if (_closed || observer != _observer) return;
-            _pilotState.Text = result.Detail;
+            ShowModeResult(result);
             Render();
+            FocusModeAction();
         }
         catch (Exception exception)
         {
             var diagnostic = MonitoringDiagnostic.From(exception); AddDiagnostic(diagnostic);
-            _pilotState.Text = "模式操作未完成；请用原厂界面核对基线。"; Render();
+            ShowModeResult(new(false, "模式操作未完成；请用原厂界面核对基线。", null)); Render();
         }
     }
 
@@ -499,6 +529,7 @@ public sealed class MainWindow : Window
         _turboMode.IsEnabled = _connected && pilot?.CanSwitchTo(PilotMode.Turbo) == true;
         _customMode.IsEnabled = _connected && pilot?.CanSwitchTo(PilotMode.Custom) == true;
         _restoreMode.IsEnabled = _connected && pilot?.CanRestore == true;
+        _keepMode.IsEnabled = _connected && pilot?.CanKeep == true;
         if (pilot is not null)
         {
             var journal = pilot.Journal;
@@ -506,7 +537,7 @@ public sealed class MainWindow : Window
             {
                 PilotPhase.Idle => "就绪", PilotPhase.Preparing => "准备", PilotPhase.Sending => "发送中",
                 PilotPhase.AwaitingReadback => "等待回读", PilotPhase.Applied => "已切换", PilotPhase.Restoring => "恢复中",
-                PilotPhase.Restored => "已恢复", PilotPhase.Uncertain => "结果不确定", _ => "连接已中断"
+                PilotPhase.Restored => "已恢复", PilotPhase.Kept => "已保留", PilotPhase.Uncertain => "结果不确定", _ => "连接已中断"
             }) + " · " + journal.Detail;
             _pilotBaseline.Text = journal.Baseline is null ? "尚未记录基线。按钮不可用时，请刷新并确认供电、实时能力和已审计配置。" :
                 $"原模式：{DeviceAudit.ModeName(journal.BaselineMode)}\n原 CPU 配置：PL1 {journal.Baseline.Text("CPU_PL1")} / PL2 {journal.Baseline.Text("CPU_PL2")}\n原 GPU TGP 配置：{journal.Baseline.Text("GPU_ConfigurableTGPTarget")}\n原风扇表：{journal.Baseline.Text("FAN_TableName")}";

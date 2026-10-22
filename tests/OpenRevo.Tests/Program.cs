@@ -412,6 +412,33 @@ async Task PilotCase(string scenario)
         Check(!(await pilot.RestoreAsync()).Succeeded && writes.Count == 1); return;
     }
     Check(first.Succeeded && pilot.Journal.Phase == PilotPhase.Applied && writes.SequenceEqual(new[] { PilotMode.Balanced }));
+    if (scenario == "keep")
+    {
+        Check(pilot.CanKeep && pilot.KeepCurrent().Succeeded && writes.Count == 1);
+        Check(pilot.Journal.Phase == PilotPhase.Kept && !pilot.CanRestore);
+        Check(!(await pilot.RestoreAsync()).Succeeded && pilot.Journal.Phase == PilotPhase.Kept);
+        pilot.End(); Check(pilot.Journal.Phase == PilotPhase.Kept); return;
+    }
+    if (scenario == "noop-applied")
+    {
+        var id = pilot.Journal.Id;
+        Check((await pilot.SwitchAsync(PilotMode.Balanced)).Succeeded && writes.Count == 1);
+        Check(pilot.Journal.Id == id && pilot.Journal.Phase == PilotPhase.Applied && pilot.CanRestore);
+    }
+    if (scenario is "sequential" or "keep-next")
+    {
+        if (scenario == "keep-next") Check(pilot.KeepCurrent().Succeeded);
+        Check((await pilot.SwitchAsync(PilotMode.Office)).Succeeded);
+        Check(pilot.Journal.BaselineMode == "1");
+        Check((await pilot.RestoreAsync()).Succeeded);
+        Check(writes.SequenceEqual(new[] { PilotMode.Balanced, PilotMode.Office, PilotMode.Balanced })); return;
+    }
+    if (scenario == "keep-disk")
+    {
+        pilot.SetJournalWriter(j => { if (j.Phase == PilotPhase.Kept) throw new IOException(); });
+        Check(!pilot.KeepCurrent().Succeeded && pilot.Journal.Phase == PilotPhase.Uncertain && writes.Count == 1);
+        Check(!(await pilot.SwitchAsync(PilotMode.Office)).Succeeded && pilot.Journal.Phase == PilotPhase.Uncertain); return;
+    }
     if (scenario == "os-after")
     {
         pilot.UpdatePowerSource(false); pilot.UpdatePowerSource(true);
@@ -433,6 +460,20 @@ async Task PilotCase(string scenario)
     Check(ModePilotPolicy.SameConfiguration(pilot.Journal.Baseline, restored.Snapshot));
 }
 AsyncTest("pilot snapshots baseline, verifies target twice, explicitly restores configuration", () => PilotCase("roundtrip"));
+AsyncTest("daily keep sends no command and survives connection end", () => PilotCase("keep"));
+AsyncTest("daily no-op preserves a pending restore baseline", () => PilotCase("noop-applied"));
+AsyncTest("daily consecutive switch restores latest baseline", () => PilotCase("sequential"));
+AsyncTest("daily switch after keep records a new baseline", () => PilotCase("keep-next"));
+AsyncTest("failed keep persistence stops controls without clearing uncertainty", () => PilotCase("keep-disk"));
+Test("legacy mode journal handles kept, applied, malformed and oversized records", () =>
+{
+    Check(PreviousModeJournal.Describe("{\"Phase\":\"Kept\"}").Contains("已保留"));
+    Check(PreviousModeJournal.Describe("{\"Phase\":\"Applied\"}").Contains("已回读确认"));
+    Check(PreviousModeJournal.Describe("{\"Phase\":\"Restored\"}") == "");
+    Check(PreviousModeJournal.Describe("{}").Contains("缺少"));
+    Check(PreviousModeJournal.Describe("{broken").Contains("无法解析"));
+    Check(PreviousModeJournal.Describe(new string(' ', 65537)).Contains("过大"));
+});
 AsyncTest("pilot rejects double-click rather than queueing another mode write", () => PilotCase("busy"));
 AsyncTest("pilot refuses DC before any write", () => PilotCase("dc"));
 AsyncTest("pilot refuses a journal failure before any write", () => PilotCase("disk"));
