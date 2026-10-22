@@ -14,7 +14,6 @@ using OpenRevo.Core;
 using System.Runtime.InteropServices;
 using PowerManager = Microsoft.Windows.System.Power.PowerManager;
 using Microsoft.Windows.System.Power;
-using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.System;
 using Windows.UI.Text;
@@ -85,6 +84,7 @@ public sealed partial class MainWindow : Window
         Title = "OpenRevo";
         SystemBackdrop = new MicaBackdrop();
         _root.Style = (Style)Application.Current.Resources["RootSurfaceStyle"];
+        ApplyTheme();
         _root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         _root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         _root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
@@ -101,6 +101,8 @@ public sealed partial class MainWindow : Window
         _navigation.IsBackButtonVisible = NavigationViewBackButtonVisible.Collapsed;
         _navigation.IsSettingsVisible = false;
         _navigation.IsTitleBarAutoPaddingEnabled = false;
+        _navigation.HorizontalContentAlignment = HorizontalAlignment.Stretch;
+        _navigation.VerticalContentAlignment = VerticalAlignment.Stretch;
         _navigation.OpenPaneLength = 204;
         _navigation.PaneDisplayMode = NavigationViewPaneDisplayMode.Auto;
         _navigation.CompactModeThresholdWidth = 800;
@@ -158,11 +160,14 @@ public sealed partial class MainWindow : Window
         _timer.Start();
         _root.Loaded += (_, _) =>
         {
-            SizeForCurrentDisplay(); UpdateCaptionColors(); EnablePowerNotifications(); StartSession();
+            if (_started) return;
+            _started = true;
+            RestoreWindowPlacement(); UpdateCaptionColors(); EnablePowerNotifications(); StartSession();
             // Establish XAML focus before the first keyboard accelerator.
             DispatcherQueue.TryEnqueue(() => { if (!_closed) ((NavigationViewItem)_navigation.MenuItems[0]).Focus(FocusState.Programmatic); });
         };
-        Closed += (_, _) => { _closed = true; _connected = false; _timer.Stop(); DisablePowerNotifications(); _stop?.Cancel(); SaveLastSession(); };
+        AppWindow.Closing += CloseWindow;
+        Closed += (_, _) => { _closed = true; _timer.Stop(); };
         var refreshShortcut = new KeyboardAccelerator { Key = VirtualKey.R, Modifiers = VirtualKeyModifiers.Control };
         refreshShortcut.Invoked += (_, e) => { if (_connected) _observer?.RequestRefresh(); e.Handled = true; };
         _root.KeyboardAccelerators.Add(refreshShortcut);
@@ -173,21 +178,6 @@ public sealed partial class MainWindow : Window
 
     private static NavigationViewItem Nav(string label, string tag, Symbol symbol) => new()
     { Content = label, Tag = tag, Icon = new SymbolIcon(symbol) };
-
-    private void SizeForCurrentDisplay()
-    {
-        var scale = _root.XamlRoot?.RasterizationScale ?? 1;
-        var area = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary).WorkArea;
-        var width = Math.Min((int)(1180 * scale), Math.Max(640, area.Width - (int)(64 * scale)));
-        var height = Math.Min((int)(820 * scale), Math.Max(400, area.Height - (int)(64 * scale)));
-        AppWindow.MoveAndResize(new Windows.Graphics.RectInt32(area.X + (area.Width - width) / 2,
-            area.Y + (area.Height - height) / 2, width, height));
-        if (AppWindow.Presenter is OverlappedPresenter presenter)
-        {
-            presenter.PreferredMinimumWidth = Math.Min(width, (int)(720 * scale));
-            presenter.PreferredMinimumHeight = Math.Min(height, (int)(440 * scale));
-        }
-    }
 
     private void UpdateCaptionColors()
     {
@@ -214,7 +204,7 @@ public sealed partial class MainWindow : Window
 
     private static StackPanel Section(string title, string subtitle)
     {
-        var panel = new StackPanel { Spacing = 20, Margin = new Thickness(24, 20, 24, 28), MaxWidth = 1120, HorizontalAlignment = HorizontalAlignment.Stretch };
+        var panel = new StackPanel { Spacing = 20, Margin = new Thickness(24, 20, 24, 28), HorizontalAlignment = HorizontalAlignment.Stretch };
         var heading = new StackPanel { Spacing = 6 };
         var titleText = Text(title, 28, true); AutomationProperties.SetHeadingLevel(titleText, AutomationHeadingLevel.Level1);
         heading.Children.Add(titleText); heading.Children.Add(Secondary(subtitle)); panel.Children.Add(heading);
@@ -305,10 +295,14 @@ public sealed partial class MainWindow : Window
     {
         var panel = Section("设置与诊断", $"OpenRevo {AppVersion.Current} · 适用于当前已验证的机型与后台版本");
         var theme = new ComboBox { Header = "应用主题", HorizontalAlignment = HorizontalAlignment.Left, MinWidth = 220 };
-        theme.Items.Add("跟随系统"); theme.Items.Add("浅色"); theme.Items.Add("深色"); theme.SelectedIndex = 0;
-        theme.SelectionChanged += (_, _) => _root.RequestedTheme = theme.SelectedIndex switch
-        { 1 => ElementTheme.Light, 2 => ElementTheme.Dark, _ => ElementTheme.Default };
+        theme.Items.Add("跟随系统"); theme.Items.Add("浅色"); theme.Items.Add("深色"); theme.SelectedIndex = (int)_preferences.Theme;
+        theme.SelectionChanged += (_, _) =>
+        {
+            _preferences = _preferences with { Theme = (AppThemePreference)theme.SelectedIndex };
+            ApplyTheme(); SavePreferences();
+        };
         panel.Children.Add(theme);
+        panel.Children.Add(Secondary("主题会自动保存；下次启动会恢复窗口位置、大小及最大化状态。"));
         var identity = new StackPanel { Spacing = 12 };
         identity.Children.Add(Text("设备与连接", 18, true)); identity.Children.Add(_deviceSummary);
         _identity.IsTextSelectionEnabled = true;
@@ -330,6 +324,7 @@ public sealed partial class MainWindow : Window
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             { _auditHint.Text = "无法保存报告，请确认本地目录可写。"; }
+            FrameworkElementAutomationPeer.CreatePeerForElement(_auditHint)?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
         };
         review.Children.Add(saveAudit); review.Children.Add(_auditHint); panel.Children.Add(Card(review));
         var policy = new StackPanel { Spacing = 12 };
@@ -666,6 +661,8 @@ public sealed partial class MainWindow : Window
     {
         if (_exporting || _closed) return;
         _exporting = true;
+        _export.IsEnabled = false;
+        _notice.IsOpen = false;
         try
         {
             var picker = new FileSavePicker { SuggestedFileName = $"OpenRevo-{DateTime.Now:yyyyMMdd-HHmmss}", SuggestedStartLocation = PickerLocationId.DocumentsLibrary };
@@ -674,16 +671,21 @@ public sealed partial class MainWindow : Window
             var file = await picker.PickSaveFileAsync();
             if (file is not null && !_closed)
             {
-                await FileIO.WriteTextAsync(file, Diagnostics());
-                _notice.Title = "诊断已导出"; _notice.Message = file.Path; _notice.IsOpen = true;
+                await Windows.Storage.FileIO.WriteTextAsync(file, Diagnostics());
+                if (!_closed) ShowNotice("诊断已导出", file.Path);
             }
+            else if (!_closed) ShowNotice("已取消导出", "未保存新的诊断文件。", InfoBarSeverity.Informational);
         }
         catch (Exception)
         {
             var diagnostic = MonitoringDiagnostic.Create(DiagnosticCode.ExportFailed); AddDiagnostic(diagnostic);
-            _error.Title = "无法导出诊断"; _error.Message = InterfaceCopy(diagnostic.NextStep); _error.IsOpen = true;
+            if (!_closed) ShowNotice("无法导出诊断", "请重新选择可写的位置，或在设置与诊断中保存诊断报告。", InfoBarSeverity.Warning);
         }
-        finally { _exporting = false; }
+        finally
+        {
+            _exporting = false;
+            if (!_closed) { _export.IsEnabled = true; _export.Focus(FocusState.Programmatic); }
+        }
     }
 
     private void AddDiagnostic(MonitoringDiagnostic diagnostic)

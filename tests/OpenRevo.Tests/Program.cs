@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using OpenRevo.Core;
+using OpenRevo.App;
 
 var cases = new List<(string Name, Func<Task> Run)>();
 void Test(string name, Action run) => cases.Add((name, () => { run(); return Task.CompletedTask; }));
@@ -23,6 +24,69 @@ Packet Publish(string topic, string json, byte header = 0x30)
     return new Packet(header, body);
 }
 var supportJson = """{"ProjectID":26,"CustomizeTarget":56,"BIOS_PROJECT_ID":"IDY","SystemMonitorSupport":1,"ServiceReady":1,"IsAMDPlatform":0,"IsNvGpu":1,"ColorCalibrationSupport":4,"LiquidCoolingSupport":0}""";
+
+Test("UI preferences survive restart independently of device configuration", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "OpenRevo-preferences-" + Guid.NewGuid().ToString("N"));
+    var path = Path.Combine(directory, "preferences.json");
+    try
+    {
+        Check(AppPreferences.Load(path) == new AppPreferences());
+        var settings = new AppPreferences(AppThemePreference.Dark, new WindowBounds(-1800, 40, 1000, 700), true);
+        settings.Save(path);
+        Check(AppPreferences.Load(path) == settings);
+        (settings with { Theme = AppThemePreference.Light }).Save(path);
+        Check(AppPreferences.Load(path).Theme == AppThemePreference.Light);
+        Check(Directory.GetFiles(directory).Length == 1, "Preference writes must leave no temporary files");
+    }
+    finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+});
+Test("damaged or unknown UI preferences do not prevent startup", () =>
+{
+    var path = Path.GetTempFileName();
+    try
+    {
+        foreach (var json in new[] { "{", "null", "{\"Theme\":\"FutureTheme\"}" })
+        {
+            File.WriteAllText(path, json);
+            Check(AppPreferences.Load(path) == new AppPreferences());
+            Check(File.ReadAllText(path) == json, "Loading must not overwrite the original settings");
+        }
+        File.WriteAllText(path, """{"Theme":999,"Window":{"X":0,"Y":0,"Width":-1,"Height":0},"Extra":true}""");
+        Check(AppPreferences.Load(path) == new AppPreferences());
+    }
+    finally { File.Delete(path); }
+});
+Test("unwritable preference destination reports failure without replacing existing data", () =>
+{
+    var path = Path.GetTempFileName();
+    try
+    {
+        File.WriteAllText(path, "keep existing file");
+        Reject<IOException>(() => new AppPreferences().Save(Path.Combine(path, "preferences.json")));
+        Check(File.ReadAllText(path) == "keep existing file");
+    }
+    finally { File.Delete(path); }
+});
+Test("window restoration keeps a negative-coordinate monitor and fits changed work areas", () =>
+{
+    var area = new WindowBounds(-1920, 0, 1920, 1040);
+    var saved = new WindowBounds(-1800, 50, 1100, 800);
+    Check(WindowBounds.Fit(saved, area, 1) == saved);
+    Check(WindowBounds.Fit(new WindowBounds(-150, 900, 1100, 800), area, 1) == new WindowBounds(-1100, 240, 1100, 800));
+});
+Test("removed monitors recenter the window and oversized windows fit the screen", () =>
+{
+    var area = new WindowBounds(0, 0, 1920, 1040);
+    Check(WindowBounds.Fit(new WindowBounds(-1800, 50, 1000, 700), area, 1) == new WindowBounds(460, 170, 1000, 700));
+    Check(WindowBounds.Fit(new WindowBounds(20, 20, 4000, 3000), area, 1) == area);
+});
+Test("window minimums account for scale without exceeding small work areas", () =>
+{
+    Check(WindowBounds.Fit(new WindowBounds(0, 0, 200, 200), new WindowBounds(0, 0, 1920, 1040), 1.5)
+        == new WindowBounds(0, 0, 1080, 660));
+    Check(WindowBounds.Fit(null, new WindowBounds(0, 0, 600, 360), 2) == new WindowBounds(0, 0, 600, 360));
+});
 
 Test("only the audited board and BIOS pass the device gate", () =>
 {

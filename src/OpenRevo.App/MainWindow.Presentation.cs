@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
 using OpenRevo.Core;
 
@@ -17,6 +18,7 @@ public sealed partial class MainWindow
     private readonly ProgressBar _modeProgress = new() { IsIndeterminate = true, Visibility = Visibility.Collapsed };
     private readonly TextBlock _deviceSummary = Text("正在检测本机", 14);
     private readonly InfoBar _notice = new() { IsOpen = false, IsClosable = true, Severity = InfoBarSeverity.Success };
+    private readonly Button _export = new() { Content = "导出诊断" };
     private ModePilotResult? _lastModeResult;
 
     private static TextBlock Secondary(string text) => new()
@@ -38,10 +40,12 @@ public sealed partial class MainWindow
         var labels = new StackPanel { Spacing = 2 }; labels.Children.Add(_connection); labels.Children.Add(_device);
         status.Children.Add(labels); bar.Children.Add(status);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
-        var export = new Button { Content = "导出诊断" };
-        export.Click += async (_, _) => await ExportAsync();
-        ToolTipService.SetToolTip(export, "保存当前诊断数据 (Ctrl+S)");
-        actions.Children.Add(_refresh); actions.Children.Add(export); actions.Children.Add(_connect);
+        _export.Click += async (_, _) => await ExportAsync();
+        ToolTipService.SetToolTip(_export, "保存当前诊断数据 (Ctrl+S)");
+        AutomationProperties.SetLiveSetting(_notice, AutomationLiveSetting.Polite);
+        AutomationProperties.SetLiveSetting(_error, AutomationLiveSetting.Polite);
+        AutomationProperties.SetHelpText(_connect, "结束或重新建立监测连接，不改变硬件模式。");
+        actions.Children.Add(_refresh); actions.Children.Add(_export); actions.Children.Add(_connect);
         Grid.SetColumn(actions, 1); bar.Children.Add(actions);
         bar.SizeChanged += (_, _) =>
         {
