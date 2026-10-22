@@ -36,7 +36,7 @@ public sealed record MonitoringDiagnostic(DiagnosticCode Code, string Message, s
         _ => "监控遇到未分类错误。"
     }, code switch
     {
-        DiagnosticCode.UnsupportedDevice or DiagnosticCode.ServiceVersionMismatch or DiagnosticCode.CredentialFormat => "保留诊断，核对机型与安装版本后重新审计。",
+        DiagnosticCode.UnsupportedDevice or DiagnosticCode.ServiceVersionMismatch or DiagnosticCode.CredentialFormat => "在连接与外观查看具体差异并导出审计材料；恢复已支持的版本后重新检测。新版本需独立审计，不会自动加入信任。",
         DiagnosticCode.SlotOccupied => "先断开另一个 OpenRevo 窗口或读取器，再重新连接。",
         DiagnosticCode.CapabilityRevoked or DiagnosticCode.CapabilityExpired => "核对厂商后台状态；确认后手动重新连接。",
         DiagnosticCode.ExportFailed => "选择可写目录，或查看连接与诊断页中的保存结果。",

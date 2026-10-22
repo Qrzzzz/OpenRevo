@@ -8,7 +8,8 @@ namespace OpenRevo.Core;
 
 public sealed record DeviceIdentity(string Manufacturer, string Model, string Board, string Bios);
 public sealed record InstallationReport(DeviceIdentity Device, string ProfileId, string? BridgeSha256, string? ServiceSha256,
-    string DeviceMatch, string FileMatch);
+    string DeviceMatch, string FileMatch, IReadOnlyList<AuditDifference>? Differences = null,
+    long? BridgeBytes = null, long? ServiceBytes = null);
 
 public sealed class BridgeInstallation
 {
@@ -31,7 +32,7 @@ public static partial class AuditedInstallation
         var identity = new DeviceIdentity(Read("SystemManufacturer"), Read("SystemProductName"), Read("BaseBoardProduct"), Read("BIOSVersion"));
         var report = new InstallationReport(identity, AuditedProfile.Current.Id, null, null, "pending", "not checked");
         try { AuditedProfile.ValidateDevice(identity); }
-        catch (MonitoringException) { onInspection?.Invoke(report with { DeviceMatch = "mismatch" }); throw; }
+        catch (MonitoringException) { onInspection?.Invoke(report with { DeviceMatch = "mismatch", Differences = AuditReview.Device(identity) }); throw; }
         report = report with { DeviceMatch = "matched" };
         onInspection?.Invoke(report);
         using var service = machine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\GCUBridge");
@@ -42,19 +43,22 @@ public static partial class AuditedInstallation
         var bridgePath = Path.GetFullPath(imagePath);
         var servicePath = Path.Combine(Path.GetDirectoryName(bridgePath)!, "MyControlCenter", "GCUService.exe");
         if (!File.Exists(bridgePath) || !File.Exists(servicePath)) throw new MonitoringException(DiagnosticCode.InstallationNotFound);
-        if (new FileInfo(bridgePath).Length != AuditedProfile.Current.Bridge.Bytes || new FileInfo(servicePath).Length != AuditedProfile.Current.Service.Bytes)
-        {
-            onInspection?.Invoke(report with { FileMatch = "size mismatch" });
-            throw new MonitoringException(DiagnosticCode.ServiceVersionMismatch);
-        }
-        var bridge = File.ReadAllBytes(bridgePath);
-        var bridgeHash = Convert.ToHexString(SHA256.HashData(bridge));
+        using var bridgeStream = File.OpenRead(bridgePath);
+        var bridgeHash = Convert.ToHexString(SHA256.HashData(bridgeStream));
         using var stream = File.OpenRead(servicePath);
         var serviceHash = Convert.ToHexString(SHA256.HashData(stream));
-        report = report with { BridgeSha256 = bridgeHash, ServiceSha256 = serviceHash };
+        var differences = AuditReview.Files(bridgeHash, bridgeStream.Length, serviceHash, stream.Length);
+        report = report with { BridgeSha256 = bridgeHash, ServiceSha256 = serviceHash,
+            BridgeBytes = bridgeStream.Length, ServiceBytes = stream.Length, Differences = differences };
+        if (differences.Count != 0)
+        {
+            onInspection?.Invoke(report with { FileMatch = "mismatch" });
+            throw new MonitoringException(DiagnosticCode.ServiceVersionMismatch);
+        }
         try { AuditedProfile.ValidateFiles(bridgeHash, serviceHash); }
         catch (MonitoringException) { onInspection?.Invoke(report with { FileMatch = "hash mismatch" }); throw; }
         onInspection?.Invoke(report with { FileMatch = "matched" });
+        var bridge = File.ReadAllBytes(bridgePath);
         var suffixes = new HashSet<string>(StringComparer.Ordinal);
         for (var offset = 0; offset < 2; offset++)
         {

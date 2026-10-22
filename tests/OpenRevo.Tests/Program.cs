@@ -503,16 +503,95 @@ Test("configuration comparison detects changes outside the required field subset
     Check(!ModePilotPolicy.SameConfiguration(a, Sample("Fan/Status", JsonSerializer.Serialize(values))));
 });
 
-async Task ProductionModeCase(PilotMode baseline, PilotMode target, bool changedProfile = false, bool turboSupported = true)
+Test("configuration roles exempt only notifications and keep every other field audited", () =>
+{
+    foreach (var entry in ModePilotPolicy.Evidence.GetProperty("observedConfigurations").EnumerateObject())
+    {
+        var original = Sample("Fan/Status", entry.Value.GetRawText());
+        foreach (var field in entry.Value.EnumerateObject())
+        {
+            var values = JsonSerializer.Deserialize<Dictionary<string, object?>>(entry.Value.GetRawText())!;
+            values[field.Name] = "changed-for-test";
+            var changed = Sample("Fan/Status", JsonSerializer.Serialize(values));
+            if (AuditReview.AdvisoryFields.Contains(field.Name))
+                Check(ModePilotPolicy.AuditedMode(changed) == entry.Name && ModePilotPolicy.SameConfiguration(original, changed), field.Name);
+            else
+                Check(ModePilotPolicy.AuditedMode(changed) is null, field.Name);
+        }
+    }
+});
+Test("AC is a live gate rather than a configuration identity", () =>
+{
+    var config = ModePilotPolicy.Evidence.GetProperty("observedConfigurations").GetProperty("0");
+    var values = JsonSerializer.Deserialize<Dictionary<string, object?>>(config.GetRawText())!;
+    values["IsAC"] = false;
+    var sample = Sample("Fan/Status", JsonSerializer.Serialize(values));
+    Check(ModePilotPolicy.AuditedMode(sample) == "0");
+    Check(ModePilotPolicy.SameConfiguration(Sample("Fan/Status", config.GetRawText()), sample));
+});
+Test("all four null mode reports resolve uniquely and compare symmetrically with their baseline", () =>
+{
+    foreach (var entry in ModePilotPolicy.Evidence.GetProperty("observedConfigurations").EnumerateObject())
+    {
+        var original = Sample("Fan/Status", entry.Value.GetRawText());
+        var values = JsonSerializer.Deserialize<Dictionary<string, object?>>(entry.Value.GetRawText())!;
+        values["OperatingMode"] = null;
+        var sample = Sample("Fan/Status", JsonSerializer.Serialize(values));
+        Check(ModePilotPolicy.AuditedMode(sample) == entry.Name);
+        Check(sample.Text("OperatingMode") is null);
+        Check(ModePilotPolicy.SameConfiguration(original, sample) && ModePilotPolicy.SameConfiguration(sample, original));
+    }
+});
+Test("audit review identifies concrete changed and missing control fields", () =>
+{
+    var config = ModePilotPolicy.Evidence.GetProperty("observedConfigurations").GetProperty("3");
+    var values = JsonSerializer.Deserialize<Dictionary<string, object?>>(config.GetRawText())!;
+    values["CPU_PL1"] = "99"; values.Remove("CustomProfileIndex"); values["NewControl"] = "1";
+    var review = AuditReview.Configuration(Sample("Fan/Status", JsonSerializer.Serialize(values)));
+    Check(review.Mode is null);
+    Check(review.Differences.Any(d => d.Field == "CPU_PL1" && d.Observed == "99"));
+    Check(review.Differences.Any(d => d.Field == "CustomProfileIndex" && d.Observed == "missing"));
+    Check(review.Differences.Any(d => d.Field == "NewControl" && d.Category == "unclassified"));
+});
+Test("installation review distinguishes BIOS, service hash and file size changes", () =>
+{
+    var profile = AuditedProfile.Current;
+    var device = new DeviceIdentity(profile.Manufacturer, profile.Model, profile.Board, "new BIOS");
+    var difference = AuditReview.Device(device).Single();
+    Check(difference.Field == "BIOS" && difference.Expected == profile.Bios && difference.Observed == "new BIOS");
+    var files = AuditReview.Files(new string('0', 64), profile.Bridge.Bytes + 1, profile.Service.Sha256, profile.Service.Bytes);
+    Check(files.Count == 2 && files.All(d => d.Field.StartsWith("GCUBridge")));
+    Check(AuditReview.Files(profile.Bridge.Sha256, profile.Bridge.Bytes, profile.Service.Sha256, profile.Service.Bytes).Count == 0);
+});
+Test("unrelated capability changes preserve lease while identity and readiness differences are explained", () =>
+{
+    var original = Sample("Customize/SupportInfo", supportJson);
+    var changed = Sample("Customize/SupportInfo", supportJson.Replace("\"ColorCalibrationSupport\":4", "\"ColorCalibrationSupport\":0"));
+    var clock = new TestClock(); var lease = new TelemetryLease(clock, TimeSpan.FromSeconds(45));
+    Check(lease.Observe(original) && !lease.Observe(changed) && lease.Demand());
+    Check(AuditReview.Capabilities(changed).Count == 0);
+    var mismatched = Sample("Customize/SupportInfo", supportJson.Replace("\"IDY\"", "\"NEW\"").Replace("\"ServiceReady\":1", "\"ServiceReady\":0"));
+    var differences = AuditReview.Capabilities(mismatched);
+    Check(differences.Any(d => d.Field == "BIOS_PROJECT_ID" && d.Category == "machine identity"));
+    Check(differences.Any(d => d.Field == "ServiceReady" && d.Category == "monitoring requirement"));
+});
+
+async Task ProductionModeCase(PilotMode baseline, PilotMode target, bool changedProfile = false, bool turboSupported = true, bool varyingNotifications = false)
 {
     var mode = baseline; var writes = new List<PilotMode>();
     var pilot = new ModePilot(TimeProvider.System);
+    var statusNumber = 0;
     pilot.SetJournalWriter(_ => { });
     pilot.Bind((selected, _) => { pilot.CheckSending(); writes.Add(selected); mode = selected; return Task.CompletedTask; }, _ =>
     {
         pilot.Observe(Sample("Customize/SupportInfo", supportJson[..^1] + ",\"FanSettingsSupport\":1,\"TurboModeSupport\":" + (turboSupported ? "1}" : "0}")));
         var payload = JsonSerializer.Deserialize<Dictionary<string, object?>>(ModePilotPolicy.Evidence.GetProperty("observedConfigurations").GetProperty(((int)mode).ToString()).GetRawText())!;
         if (changedProfile) payload["CustomProfileIndex"] = "99";
+        if (varyingNotifications)
+        {
+            payload["BSOD_DefaultNotify"] = (++statusNumber % 2).ToString();
+            payload["BSOD_TimestampRestored"] = "notification-" + statusNumber;
+        }
         pilot.Observe(Sample("Fan/Status", JsonSerializer.Serialize(payload)));
         return Task.CompletedTask;
     }, () => true, default);
@@ -524,6 +603,7 @@ async Task ProductionModeCase(PilotMode baseline, PilotMode target, bool changed
     Check(ModePilotPolicy.SameConfiguration(pilot.Journal.Baseline, pilot.Journal.Confirmed));
 }
 AsyncTest("production office-turbo-office uses audited configurations", () => ProductionModeCase(PilotMode.Office, PilotMode.Turbo));
+AsyncTest("notification changes during switch and restore do not invalidate stable control readback", () => ProductionModeCase(PilotMode.Office, PilotMode.Balanced, varyingNotifications: true));
 AsyncTest("production office-saved-custom-office uses audited configurations", () => ProductionModeCase(PilotMode.Office, PilotMode.Custom));
 AsyncTest("production restores an original turbo baseline", () => ProductionModeCase(PilotMode.Turbo, PilotMode.Balanced));
 AsyncTest("production restores an original saved custom baseline", () => ProductionModeCase(PilotMode.Custom, PilotMode.Office));

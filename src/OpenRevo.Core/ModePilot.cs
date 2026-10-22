@@ -41,24 +41,24 @@ public static class ModePilotPolicy
             var hash = Convert.ToHexString(SHA256.HashData(evidence)).ToLowerInvariant();
             if (hash != root.GetProperty("evidence").GetProperty("sha256").GetString()) throw new InvalidDataException("Pilot evidence identity mismatch.");
         }
+        var classification = AuditReview.Policy;
+        var fields = new[] { "platformIdentityFields", "liveStateFields", "advisoryFields", "controlConfigurationFields" }
+            .SelectMany(group => classification.GetProperty(group).EnumerateArray().Select(v => v.GetString()!)).ToArray();
+        if (fields.Distinct().Count() != fields.Length || root.GetProperty("observedConfigurations").EnumerateObject()
+            .Any(mode => !new HashSet<string>(fields).SetEquals(mode.Value.EnumerateObject().Select(p => p.Name))))
+            throw new InvalidDataException("Configuration classification does not cover the audited field set.");
         return root.Clone();
     }
     // This vendor can temporarily return null OperatingMode while switching.
     // Keep that raw value; resolve mode separately from corroborating evidence.
     public static bool Complete(TopicSample? sample) => sample is not null && ConfigurationFields.Where(f => f != "OperatingMode").All(f => sample.Text(f) is not null);
     public static bool SameConfiguration(TopicSample? a, TopicSample? b) => Complete(a) && Complete(b)
-        && a!.Payload.EnumerateObject().Count() == b!.Payload.EnumerateObject().Count()
-        && a.Payload.EnumerateObject().All(p => b.Payload.TryGetProperty(p.Name, out var value) && p.Value.GetRawText() == value.GetRawText());
+        && AuditReview.ConfigurationDifferences(a!.Payload, b!.Payload).Count == 0;
     internal static bool Audited(TopicSample sample)
     {
         return AuditedMode(sample) is not null;
     }
-    internal static string? AuditedMode(TopicSample sample) => !Enabled || !Complete(sample) ? null :
-        Evidence.GetProperty("observedConfigurations").EnumerateObject().Where(p => p.Name is "0" or "1" or "2" or "3")
-            .Where(p => p.Value.EnumerateObject().Count() == sample.Payload.EnumerateObject().Count()
-                && p.Value.EnumerateObject().Where(f => f.Name != "OperatingMode" || sample.Text(f.Name) is not null)
-                    .All(f => sample.Payload.TryGetProperty(f.Name, out var value) && f.Value.GetRawText() == value.GetRawText()))
-            .Select(p => p.Name).SingleOrDefault();
+    internal static string? AuditedMode(TopicSample sample) => !Enabled || !Complete(sample) ? null : AuditReview.Configuration(sample).Mode;
 }
 
 /// <summary>Daily mode switching with a baseline for the latest operation in the same connection.</summary>
@@ -86,6 +86,22 @@ public sealed class ModePilot
     public bool Enabled => ModePilotPolicy.Enabled || _audit;
     public TopicSample? CurrentStatus { get { lock (_gate) return _status; } }
     public string? CurrentMode { get { lock (_gate) return _status is null ? null : ResolveMode(_status); } }
+    public ConfigurationReview ConfigurationReview { get { lock (_gate) return AuditReview.Configuration(_status); } }
+    public string ControlStatus
+    {
+        get
+        {
+            lock (_gate)
+            {
+                if (Busy) return "正在操作，请等待回读。";
+                if (_journal.Phase is PilotPhase.Uncertain or PilotPhase.Interrupted)
+                    return "本次操作已停止；核对原厂当前模式后手动重新连接，不会重放旧操作。";
+                if (_status is null) return "等待实时模式配置。";
+                try { Require(_status); return "身份、能力和关键配置匹配；可切换到其他模式。"; }
+                catch (InvalidOperationException ex) { return ex.Message; }
+            }
+        }
+    }
     public bool CanSwitch => Ready(false);
     public bool CanSwitchTo(PilotMode mode)
     {
@@ -205,12 +221,18 @@ public sealed class ModePilot
     {
         if (!Enabled || _send is null || _connection.IsCancellationRequested)
             throw new InvalidOperationException("试点尚未通过本机审计或连接已失效。");
-        if (_capabilities is null || _capabilities.Freshness(_clock, true) != SampleFreshness.Current
-            || !DeviceAudit.MatchesAuditedTelemetry(_capabilities) || _capabilities.Text("FanSettingsSupport") != "1")
-            throw new InvalidOperationException("需要当前机型的实时模式能力确认。");
-        if (_systemAc == false || sample.Freshness(_clock, true) != SampleFreshness.Current || !Ac(sample) || ResolveMode(sample) is null
-            || !ModePilotPolicy.Complete(sample)) throw new InvalidOperationException("需接通电源并处于已审计的四种模式之一，且配置完整、新鲜。");
-        if (!_audit && !ModePilotPolicy.Audited(sample)) throw new InvalidOperationException("当前配置与实机审计结果不一致，请先重新审计。");
+        if (_capabilities is null || _capabilities.Freshness(_clock, true) != SampleFreshness.Current)
+            throw new InvalidOperationException("实时能力未收到或已过期，请刷新后等待新响应。");
+        if (!DeviceAudit.MatchesAuditedTelemetry(_capabilities))
+            throw new InvalidOperationException("能力响应中的机型身份或监控就绪条件不匹配，请查看硬件能力与审计材料。");
+        if (_capabilities.Text("FanSettingsSupport") != "1")
+            throw new InvalidOperationException("当前 FanSettingsSupport 未声明模式控制支持；监测仍可继续。");
+        if (_systemAc == false || !Ac(sample)) throw new InvalidOperationException("当前为电池供电或供电尚未确认，模式控制需接通电源。");
+        if (sample.Freshness(_clock, true) != SampleFreshness.Current)
+            throw new InvalidOperationException("模式配置已过期，请刷新并等待实时响应。");
+        if (!ModePilotPolicy.Complete(sample) || ResolveMode(sample) is null)
+            throw new InvalidOperationException("关键配置缺失或无法识别模式，请查看具体差异并保存审计材料。");
+        if (!_audit && !ModePilotPolicy.Audited(sample)) throw new InvalidOperationException("关键配置与已审计结果不一致，请核对原厂配置并保存审计材料。");
         if (_tray?.Freshness(_clock, true) == SampleFreshness.Current && _tray.Text("OperatingMode") != ResolveMode(sample))
             throw new InvalidOperationException("两种状态的模式尚未一致，暂不允许发送。");
         if (_authorized?.Invoke() != true) throw new InvalidOperationException("监控授权已失效。");

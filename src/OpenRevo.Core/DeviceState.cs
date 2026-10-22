@@ -30,8 +30,8 @@ public static class DeviceAudit
     public static IReadOnlyList<Capability> Capabilities(TopicSample? sample, bool connected = true) => new[]
     {
         Make("系统监控", "SystemMonitorSupport", sample, "可读取", "CPU、GPU、风扇与电池状态"),
-        Make("风扇与性能模式", "FanSettingsSupport", sample, "受限试点", "匹配已审计机型与配置且接通电源时，允许四模式切换；自定义使用原厂已保存配置，曲线未开放"),
-        Make("狂暴模式", "TurboModeSupport", sample, "受限试点", "需实时能力和完整审计配置匹配，支持切换与显式恢复"),
+        Make("风扇与性能模式", "FanSettingsSupport", sample, "模式控制", "匹配已审计机型与关键配置且接通电源时，允许四模式切换；自定义使用原厂已保存配置，曲线未开放"),
+        Make("狂暴模式", "TurboModeSupport", sample, "模式控制", "需实时能力和关键审计配置匹配，支持切换与显式恢复"),
         Make("屏幕色彩校准", "ColorCalibrationSupport", sample, "待审计", "非零值是能力编码；ICC、Gamma、矩阵恢复路径未核清"),
         Make("独显直连", "DGpuDirectConnectionSupport", sample, "待审计", "显示拓扑与重启条件未核清"),
         Make("功耗与超频", "OcSettingsSupport", sample, "待审计", "配置存在范围矛盾；不生成可写参数"),

@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCES = ['protocol/commands.json', 'protocol/live-evidence.json', 'protocol/processing-chains.json', 'protocol/device-profiles.json', 'protocol/mode-pilot.json', 'protocol/mode-evidence.json', 'protocol/stability-evidence.json']
+SOURCES = ['protocol/commands.json', 'protocol/live-evidence.json', 'protocol/processing-chains.json', 'protocol/device-profiles.json', 'protocol/mode-pilot.json', 'protocol/mode-evidence.json', 'protocol/stability-evidence.json', 'protocol/configuration-policy.json']
 REQUESTS = [
     ('Capabilities', 'Customize/SupportControl', 'GETSUPPORT', ['Customize/SupportInfo'], 'query capabilities; no hardware control'),
     ('FanStatus', 'Fan/Control', 'GETSTATUS', ['Fan/Status'], 'query current configuration; values are not live watts'),

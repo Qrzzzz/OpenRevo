@@ -29,6 +29,10 @@
     {
       "path": "protocol/stability-evidence.json",
       "sha256": "06d29c82c7ae2fffce342651af6085875d05f10caf18ef7e4bc08d1837e73a6d"
+    },
+    {
+      "path": "protocol/configuration-policy.json",
+      "sha256": "6e117d004f57999a233b64a0484de3d69c4633471c6b72e25743bc9b932e7237"
     }
   ],
   "scope": "audited local machine only; handler metadata is not recovered handler logic",

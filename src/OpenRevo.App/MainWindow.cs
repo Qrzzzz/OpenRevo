@@ -34,7 +34,11 @@ public sealed class MainWindow : Window
     private readonly TextBlock _device = Text("正在识别本机设备", 14);
     private readonly TextBlock _configuration = Text("等待厂商配置状态", 14);
     private readonly TextBlock _identity = Text("正在读取安装与机型信息", 14);
+    private readonly TextBlock _controlReadiness = Text("等待识别", 13);
+    private readonly TextBlock _auditHint = Text("", 13);
+    private readonly Button _reinspect = new() { Content = "重新检测并连接" };
     private readonly TextBlock _capAge = Text("等待能力响应", 13);
+    private readonly TextBlock _capReview = Text("等待能力身份核对", 13);
     private readonly TextBlock _sensorNotice = Text("", 13);
     private readonly Queue<SessionHealthSnapshot> _previousSessions = new();
     private bool _powerNotificationsAvailable;
@@ -126,6 +130,12 @@ public sealed class MainWindow : Window
             if (!_closed) _connect.IsEnabled = true;
         };
         _refresh.Click += (_, _) => _observer?.RequestRefresh();
+        _reinspect.Click += (_, _) =>
+        {
+            if (_session is { IsCompleted: false }) return;
+            _modeResult.Text = "";
+            StartSession();
+        };
         _officeMode.Click += async (_, _) => await OperateModeAsync(PilotMode.Office, false);
         _balancedMode.Click += async (_, _) => await OperateModeAsync(PilotMode.Balanced, false);
         _turboMode.Click += async (_, _) => await OperateModeAsync(PilotMode.Turbo, false);
@@ -272,7 +282,7 @@ public sealed class MainWindow : Window
     private UIElement CapabilitiesPage()
     {
         var panel = Section("硬件能力", "能力声明来自本机厂商服务，开放范围依据当前审计证据。");
-        panel.Children.Add(_capAge); panel.Children.Add(_capabilities);
+        panel.Children.Add(_capAge); panel.Children.Add(_capReview); panel.Children.Add(_capabilities);
         return new ScrollViewer { Content = panel, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
     }
 
@@ -308,11 +318,28 @@ public sealed class MainWindow : Window
         panel.Children.Add(theme);
         var identity = new StackPanel { Spacing = 12 };
         identity.Children.Add(Text("本机识别", 18, true)); identity.Children.Add(_identity); panel.Children.Add(Card(identity));
+        var review = new StackPanel { Spacing = 12 };
+        review.Children.Add(Text("版本差异与重新审计", 18, true));
+        review.Children.Add(Text("机型／BIOS 和后台版本分别核对。版本不匹配时查看下方实际值与审计值，保存材料供重新审计；恢复受支持版本后，可重新检测并连接。检测或保存材料不会自动批准新机型、新版本或配置。", 13));
+        review.Children.Add(_reinspect);
+        var saveAudit = new Button { Content = "保存审计材料" };
+        saveAudit.Click += (_, _) =>
+        {
+            try
+            {
+                var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OpenRevo", "audit-review.json");
+                DiagnosticFile.Write(path, Diagnostics());
+                _auditHint.Text = "已保存：" + path + "。提交审计前可检查内容；程序不会上传或加载该文件以解除限制。";
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            { _auditHint.Text = "审计材料保存失败，请确认本地目录可写。"; }
+        };
+        review.Children.Add(saveAudit); review.Children.Add(_auditHint); panel.Children.Add(Card(review));
         var policy = new StackPanel { Spacing = 12 };
         policy.Children.Add(Text("连接范围", 18, true));
         policy.Children.Add(Text("仅连接本机厂商后台。启动时核对主板、BIOS 与服务文件，版本不匹配时停止连接。"));
         policy.Children.Add(Text("监测会启用厂商后台的共享采样计时器。断开只结束本应用的连接，不发送全局停止请求，以免影响原厂监控。"));
-        policy.Children.Add(Text("当前开放状态读取、诊断导出与受限的四模式切换试点。风扇曲线、电池阈值、屏幕色彩、功耗和超频写入尚未开放。"));
+        policy.Children.Add(Text("当前开放状态读取、诊断导出与四模式控制。通知与时间戳不参与控制配置比对，供电及模式单独核对。风扇曲线、电池阈值、屏幕色彩、功耗和超频写入尚未开放。"));
         panel.Children.Add(Card(policy));
         var diagnostics = new StackPanel { Spacing = 12 };
         diagnostics.Children.Add(Text("连接诊断", 18, true));
@@ -336,6 +363,7 @@ public sealed class MainWindow : Window
         panel.Children.Add(Text("自定义使用原厂当前已保存的配置；本版不编辑配置参数或风扇曲线。", 13));
         var state = new StackPanel { Spacing = 12 };
         state.Children.Add(_pilotState); state.Children.Add(_pilotBaseline); panel.Children.Add(Card(state));
+        panel.Children.Add(_controlReadiness);
         panel.Children.Add(Text("可直接继续切换，每次以切换前的配置作为新的基线。保留当前模式不发送命令，并结束本次恢复记录；恢复基线只撤销最近一次切换。关闭、断线和重连均不会自动恢复。", 13));
         panel.Children.Add(Text("使用 Tab / Shift+Tab 移动焦点，Enter 或空格操作按钮；Ctrl+R 刷新，Ctrl+S 导出诊断。", 13));
         panel.Children.Add(Text("原厂程序仍可能改变配置。出现结果不明或外部变化时停止写入，请用原厂界面核对保存的基线。", 13));
@@ -465,7 +493,7 @@ public sealed class MainWindow : Window
                 if (inspection is not null)
                 {
                     var id = inspection.Device;
-                    _identity.Text = $"{id.Manufacturer} {id.Model}\n主板  {id.Board}\nBIOS  {id.Bios}\n配置  {inspection.ProfileId}\n身份匹配  {inspection.DeviceMatch}\n文件匹配  {inspection.FileMatch}";
+                    _identity.Text = $"{id.Manufacturer} {id.Model}\n主板  {id.Board}\nBIOS  {id.Bios}\n配置  {inspection.ProfileId}\n身份匹配  {inspection.DeviceMatch}\n文件匹配  {inspection.FileMatch}\n" + FormatDifferences(inspection.Differences ?? []);
                     _device.Text = $"{id.Model} · {id.Bios}";
                 }
             }
@@ -519,11 +547,15 @@ public sealed class MainWindow : Window
 
     private void Render()
     {
+        _reinspect.IsEnabled = _session is null || _session.IsCompleted;
         _refresh.IsEnabled = _connected;
         var health = _observer?.Health.Snapshot(_connected);
         _sensorNotice.Text = health?.SensorNotice ?? "";
         _sensorNotice.Visibility = string.IsNullOrEmpty(_sensorNotice.Text) ? Visibility.Collapsed : Visibility.Visible;
         var pilot = _observer?.Pilot;
+        var config = pilot?.ConfigurationReview;
+        _controlReadiness.Text = (_connected ? pilot?.ControlStatus : "连接未就绪；请在连接与外观查看身份／版本差异。")
+            + (config?.Differences.Count > 0 ? "\n" + FormatDifferences(config.Differences) + "\n关键配置变化时，先核对原厂配置并保存审计材料；不会自动采纳当前值。" : "");
         _officeMode.IsEnabled = _connected && pilot?.CanSwitchTo(PilotMode.Office) == true;
         _balancedMode.IsEnabled = _connected && pilot?.CanSwitchTo(PilotMode.Balanced) == true;
         _turboMode.IsEnabled = _connected && pilot?.CanSwitchTo(PilotMode.Turbo) == true;
@@ -566,6 +598,8 @@ public sealed class MainWindow : Window
     private void RenderCapabilities()
     {
         var sample = Sample("Customize/SupportInfo"); _capAge.Text = $"{Age(sample)} · BIOS 项目 {sample?.Text("BIOS_PROJECT_ID") ?? "—"} · 项目号 {sample?.Text("ProjectID") ?? "—"}";
+        var differences = AuditReview.Capabilities(sample);
+        _capReview.Text = differences.Count == 0 ? "能力响应中的机型身份与监控就绪条件匹配。每项功能仍按独立能力位开放，控制还需关键配置与供电匹配。" : FormatDifferences(differences);
         var key = (sample?.Payload.GetRawText() ?? "none") + sample?.Freshness(TimeProvider.System, _connected);
         if (_capabilityKey == key) return;
         _capabilityKey = key; _capabilities.Children.Clear();
@@ -590,11 +624,18 @@ public sealed class MainWindow : Window
         _rawKey = key; _raw.Text = sample is null ? "尚未收到此主题的数据。" : JsonSerializer.Serialize(sample.Payload, new JsonSerializerOptions { WriteIndented = true });
     }
 
+    private static string FormatDifferences(IReadOnlyList<AuditDifference> differences) => differences.Count == 0 ? "无已知差异" :
+        string.Join("\n", differences.Take(8).Select(d => $"{d.Field}：审计值 {d.Expected}；实际值 {d.Observed}"))
+        + (differences.Count > 8 ? $"\n另有 {differences.Count - 8} 项，完整差异见审计材料。" : "");
+
     private string Diagnostics() => JsonSerializer.Serialize(new
     {
-        schemaVersion = 3, application = "OpenRevo", version = AppVersion.Current, exportedAtUtc = DateTimeOffset.UtcNow, connected = _connected,
+        schemaVersion = 4, application = "OpenRevo", version = AppVersion.Current, exportedAtUtc = DateTimeOffset.UtcNow, connected = _connected,
         device = _installation?.Device, bridgeSha256 = _installation?.BridgeSha256, serviceSha256 = _installation?.ServiceSha256,
         inspection = _inspection, phase = _closed ? "Closed" : _observer?.Phase.ToString(), diagnostics = _diagnostics.ToArray(),
+        configurationReview = _observer?.Pilot.ConfigurationReview,
+        capabilityReview = AuditReview.Capabilities(Sample("Customize/SupportInfo")),
+        fieldPolicy = AuditReview.Policy,
         protocolSchemaVersion = ProtocolEvidence.Registry.GetProperty("schemaVersion").GetInt32(),
         sessionHealth = _observer?.Health.Snapshot(_connected), previousSessions = _previousSessions.ToArray(),
         powerNotificationsAvailable = _powerNotificationsAvailable,

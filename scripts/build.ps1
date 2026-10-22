@@ -19,10 +19,10 @@ if ($Publish) {
     $protocol = Join-Path $output 'protocol'
     New-Item -ItemType Directory -Path $docs,$protocol -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $root 'docs\mvp-audit.md') -Destination $docs
-    foreach ($name in @("v$version-audit.md",'processing-chains.md')) {
+    foreach ($name in @("v$version-audit.md",'processing-chains.md','reaudit.md')) {
         Copy-Item -LiteralPath (Join-Path $root "docs\$name") -Destination $docs
     }
-    foreach ($name in @('live-evidence.json','registry.json','device-profiles.json','processing-chains.json','mode-pilot.json','mode-evidence.json','stability-evidence.json')) {
+    foreach ($name in @('live-evidence.json','registry.json','device-profiles.json','processing-chains.json','mode-pilot.json','mode-evidence.json','stability-evidence.json','configuration-policy.json')) {
         Copy-Item -LiteralPath (Join-Path $root "protocol\$name") -Destination $protocol
     }
     & (Join-Path $PSScriptRoot 'write-build-manifest.ps1') -OutputDirectory $output -Sdk $sdk
