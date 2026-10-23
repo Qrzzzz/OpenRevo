@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include "tray-icon.h"
+#include "tray-menu.h"
 
 // No CLR, WinUI, device connection, timers or polling in the resident process.
 constexpr wchar_t WindowClass[] = L"OpenRevo.Background.v1";
@@ -13,9 +14,7 @@ constexpr UINT TrayMessage = WM_APP + 1;
 constexpr UINT StopMessage = WM_APP + 2;
 constexpr UINT OpenMessage = WM_APP + 3;
 constexpr UINT ExitAllMessage = WM_APP + 4;
-constexpr UINT OpenCommand = 1;
-constexpr UINT ExitCommand = 2;
-UINT showUiMessage, exitUiMessage, taskbarCreated;
+UINT showUiMessage, exitUiMessage, trayActionMessage, trayStateMessage, taskbarCreated;
 HICON trayIcon;
 HANDLE launchingUi;
 bool iconAdded;
@@ -36,14 +35,15 @@ void ReportError(const wchar_t* message)
     MessageBoxW(nullptr, message, L"OpenRevo", MB_OK | MB_ICONWARNING);
 }
 
-void OpenUi()
+void OpenUi(UINT action = 0)
 {
+    if (action != 0 && !IsTrayAction(action)) return;
     if (auto ui = FindUi())
     {
         DWORD pid = 0;
         GetWindowThreadProcessId(ui, &pid);
         AllowSetForegroundWindow(pid);
-        PostMessageW(ui, showUiMessage, 0, 0);
+        PostMessageW(ui, action == 0 ? showUiMessage : trayActionMessage, action, 0);
         return;
     }
     if (launchingUi)
@@ -58,6 +58,7 @@ void OpenUi()
     const auto folder = full.substr(0, full.find_last_of(L"\\/"));
     const auto executable = folder + L"\\OpenRevo.exe";
     std::wstring command = L"\"" + executable + L"\"";
+    if (action != 0) command += L" --tray-action " + std::to_wstring(action);
     STARTUPINFOW startup{}; startup.cb = sizeof(startup);
     PROCESS_INFORMATION process{};
     if (!CreateProcessW(executable.c_str(), command.data(), nullptr, nullptr, FALSE, 0,
@@ -72,7 +73,7 @@ HICON CreateTrayIcon()
     const auto taskbar = FindWindowW(L"Shell_TrayWnd", nullptr);
     const UINT dpi = taskbar ? GetDpiForWindow(taskbar) : GetDpiForSystem();
     const int size = GetSystemMetricsForDpi(SM_CXSMICON, dpi);
-    return LoadLucideIcon(size);
+    return LoadAppIcon(size);
 }
 
 void RefreshTrayIcon(HWND window)
@@ -111,12 +112,11 @@ void ShowMenu(HWND window, LPARAM coordinates)
     }
     // The owner must be on the menu's monitor so PerMonitorV2 chooses its actual DPI.
     SetWindowPos(window, nullptr, point.x, point.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-    const auto menu = CreatePopupMenu();
+    const auto ui = FindUi();
+    DWORD_PTR state = 0;
+    if (ui) SendMessageTimeoutW(ui, trayStateMessage, 0, 0, SMTO_ABORTIFHUNG | SMTO_BLOCK, 200, &state);
+    const auto menu = CreateTrayMenu(ui != nullptr, static_cast<DWORD>(state));
     if (!menu) return;
-    AppendMenuW(menu, MF_STRING, OpenCommand, L"打开 OpenRevo(&O)");
-    AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(menu, MF_STRING, ExitCommand, L"退出 OpenRevo(&X)");
-    SetMenuDefaultItem(menu, OpenCommand, FALSE);
     TPMPARAMS placement{}; placement.cbSize = sizeof(placement);
     if (hasBounds) placement.rcExclude = iconBounds;
     SetForegroundWindow(window);
@@ -124,7 +124,7 @@ void ShowMenu(HWND window, LPARAM coordinates)
         | TPM_BOTTOMALIGN | TPM_WORKAREA, point.x, point.y, window, hasBounds ? &placement : nullptr);
     DestroyMenu(menu);
     PostMessageW(window, WM_NULL, 0, 0);
-    if (command == OpenCommand) OpenUi();
+    if (IsTrayAction(command)) OpenUi(command);
     if (command == ExitCommand) PostMessageW(window, ExitAllMessage, 0, 0);
     NOTIFYICONDATAW icon{}; icon.cbSize = sizeof(icon); icon.hWnd = window; icon.uID = 1;
     Shell_NotifyIconW(NIM_SETFOCUS, &icon);
@@ -201,6 +201,8 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int)
     ResetEvent(ready);
     showUiMessage = RegisterWindowMessageW(L"OpenRevo.Show.v1");
     exitUiMessage = RegisterWindowMessageW(L"OpenRevo.Exit.v1");
+    trayActionMessage = RegisterWindowMessageW(L"OpenRevo.TrayAction.v1");
+    trayStateMessage = RegisterWindowMessageW(L"OpenRevo.TrayState.v1");
     taskbarCreated = RegisterWindowMessageW(L"TaskbarCreated");
     WNDCLASSW windowClass{};
     windowClass.lpfnWndProc = WindowProcedure; windowClass.hInstance = instance; windowClass.lpszClassName = WindowClass;

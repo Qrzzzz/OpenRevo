@@ -20,6 +20,7 @@ if ($Publish) {
     New-Item -ItemType Directory -Path $notices -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $root 'assets\lucide\LICENSE.txt') -Destination (Join-Path $notices 'Lucide-LICENSE.txt')
     Copy-Item -LiteralPath (Join-Path $root 'assets\lucide\manifest.json') -Destination (Join-Path $notices 'lucide.json')
+    Copy-Item -LiteralPath (Join-Path $root 'assets\branding\manifest.json') -Destination (Join-Path $output 'Assets\branding.json')
     $docs = Join-Path $output 'docs'
     $protocol = Join-Path $output 'protocol'
     New-Item -ItemType Directory -Path $docs,$protocol -Force | Out-Null

@@ -11,6 +11,8 @@ internal static class DesktopLifetime
     internal const string UiProperty = "OpenRevo.Ui.v1";
     internal static readonly uint ShowMessage = RegisterWindowMessage("OpenRevo.Show.v1");
     internal static readonly uint ExitMessage = RegisterWindowMessage("OpenRevo.Exit.v1");
+    internal static readonly uint TrayActionMessage = RegisterWindowMessage("OpenRevo.TrayAction.v1");
+    internal static readonly uint TrayStateMessage = RegisterWindowMessage("OpenRevo.TrayState.v1");
     internal static string BackgroundPath => Path.Combine(AppContext.BaseDirectory, "OpenRevo.Background.exe");
     private const string BackgroundClass = "OpenRevo.Background.v1";
     private const uint StopBackgroundMessage = 0x8002;
@@ -43,14 +45,15 @@ internal static class DesktopLifetime
 
     internal static void RequestWindowClose(nint window) => PostMessage(window, 0x0010, 0, 0);
 
-    internal static bool ShowExisting()
+    internal static bool ShowExisting(OpenRevo.Core.TrayAction? action = null)
     {
         nint found = 0;
         EnumWindows((window, _) => { if (GetProp(window, UiProperty) == 0) return true; found = window; return false; }, 0);
         if (found == 0) return false;
         GetWindowThreadProcessId(found, out var processId);
         AllowSetForegroundWindow(processId);
-        return PostMessage(found, ShowMessage, 0, 0);
+        return action is null ? PostMessage(found, ShowMessage, 0, 0)
+            : PostMessage(found, TrayActionMessage, (nuint)action.Value, 0);
     }
 
     internal delegate nint SubclassProcedure(nint window, uint message, nuint wParam, nint lParam, nuint id, nuint data);

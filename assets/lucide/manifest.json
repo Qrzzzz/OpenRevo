@@ -24,21 +24,8 @@
     "x": "e1b2",
     "check": "e06c"
   },
-  "icoSizes": [
-    16,
-    20,
-    24,
-    28,
-    32,
-    40,
-    48,
-    64,
-    128,
-    256
-  ],
   "sha256": {
     "src/OpenRevo.App/Assets/Lucide.ttf": "4791fbce390f6be8416ed0096cbbb62a752f5f6471f6f034d542bd533aff3530",
-    "src/OpenRevo.App/Assets/OpenRevo.ico": "0c808c81d1066192ef795d4924b108e19e920ced53583f451f65f1aec801db73",
     "assets/lucide/LICENSE.txt": "b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57",
     "src/OpenRevo.App/LucideGlyphs.cs": "dedf5b66bf4e39a0003989982948229b44ba1c9aae719562df010df741547a1c"
   }

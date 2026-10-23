@@ -10,6 +10,17 @@ namespace OpenRevo.App;
 public sealed partial class MainWindow
 {
     private readonly CancellationTokenSource _updateLifetime = new();
+    private Action? _checkUpdates;
+    private FrameworkElement? _updateCard;
+    private bool _revealUpdateCard;
+
+    private void RevealUpdateCard()
+    {
+        _revealUpdateCard = true;
+        if (_updateCard?.IsLoaded != true) return;
+        _revealUpdateCard = false;
+        _updateCard.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false });
+    }
 
     private FrameworkElement UpdateSettings()
     {
@@ -26,7 +37,7 @@ public sealed partial class MainWindow
             MaxHeight = 220, Visibility = Visibility.Collapsed, Header = "发布说明" };
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 16 };
         actions.Children.Add(check); actions.Children.Add(release);
-        check.Click += async (_, _) =>
+        async void CheckUpdates()
         {
             if (!check.IsEnabled) return;
             check.IsEnabled = false; status.Text = "正在连接 GitHub…";
@@ -63,9 +74,13 @@ public sealed partial class MainWindow
                     FrameworkElementAutomationPeer.CreatePeerForElement(status)?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
                 }
             }
-        };
+        }
+        _checkUpdates = CheckUpdates;
+        check.Click += (_, _) => CheckUpdates();
         panel.Children.Add(actions); panel.Children.Add(status); panel.Children.Add(download); panel.Children.Add(notes);
         panel.Children.Add(Secondary("下载由浏览器完成。更新时先完全退出 OpenRevo，再将新版解压到独立文件夹运行；设置会保留。"));
-        return Card(panel);
+        _updateCard = Card(panel);
+        _updateCard.Loaded += (_, _) => { if (_revealUpdateCard) RevealUpdateCard(); };
+        return _updateCard;
     }
 }

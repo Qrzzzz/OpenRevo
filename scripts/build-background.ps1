@@ -1,4 +1,4 @@
-param([string]$OutputDirectory)
+param([string]$OutputDirectory, [switch]$MenuPreview)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot
 if (!$OutputDirectory) { $OutputDirectory = Join-Path $root '.local\background' }
@@ -35,6 +35,11 @@ try {
     $status = $LASTEXITCODE
     Get-Content -LiteralPath $log -TotalCount 30
     if ($status -ne 0) { throw 'Native tray checks failed.' }
+    if ($MenuPreview) {
+        $previewExecutable = Join-Path $OutputDirectory 'OpenRevo.MenuPreview.exe'
+        & $compiler /nologo /O1 /W4 /WX /MT /EHsc /std:c++17 /utf-8 /DUNICODE /D_UNICODE "/Fe:$previewExecutable" "/Fo:$(Join-Path $objectDirectory 'menu-preview.obj')" (Join-Path $root 'src\OpenRevo.Background\menu-preview.cpp') /link /SUBSYSTEM:WINDOWS /MANIFEST:EMBED "/MANIFESTINPUT:$manifest" user32.lib *> $log
+        if ($LASTEXITCODE -ne 0) { Get-Content -LiteralPath $log -TotalCount 40; throw 'Tray menu preview build failed.' }
+    }
     Write-Output "已构建轻量后台：$target"
 }
 finally { $env:INCLUDE = $savedInclude; $env:LIB = $savedLib; $env:PATH = $savedPath }

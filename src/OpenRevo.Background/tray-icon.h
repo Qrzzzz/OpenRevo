@@ -2,7 +2,7 @@
 #include <vector>
 #include <cstdint>
 
-constexpr int LucideIconResource = 101;
+constexpr int AppIconResource = 101;
 inline std::vector<std::uint32_t> ReadIconPixels(HICON icon, int size)
 {
     ICONINFO info{};
@@ -26,9 +26,9 @@ inline std::vector<std::uint32_t> ReadIconPixels(HICON icon, int size)
     return pixels;
 }
 
-inline HICON LoadLucideIcon(int size)
+inline HICON LoadAppIcon(int size)
 {
-    const auto original = static_cast<HICON>(LoadImageW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(LucideIconResource),
+    const auto original = static_cast<HICON>(LoadImageW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(AppIconResource),
         IMAGE_ICON, size, size, LR_DEFAULTCOLOR));
     auto pixels = ReadIconPixels(original, size);
     bool straightAlpha = false;
@@ -65,9 +65,9 @@ inline HICON LoadLucideIcon(int size)
     return result;
 }
 
-inline std::vector<std::uint32_t> ReadLucideIconPixels(int size)
+inline std::vector<std::uint32_t> ReadAppIconPixels(int size)
 {
-    const auto icon = LoadLucideIcon(size);
+    const auto icon = LoadAppIcon(size);
     const auto pixels = ReadIconPixels(icon, size);
     if (icon) DestroyIcon(icon);
     return pixels;

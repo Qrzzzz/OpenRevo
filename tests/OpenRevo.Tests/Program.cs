@@ -1097,6 +1097,53 @@ AsyncTest("GitHub check cancellation stops the outstanding request", async () =>
     await RejectAsync<OperationCanceledException>(() => new GitHubUpdates(client).CheckAsync("1.1.0", stop.Token));
 });
 
+Test("desktop shortcuts accept only a single fixed action and never arbitrary arguments", () =>
+{
+    foreach (var action in Enum.GetValues<TrayAction>())
+    {
+        Check(TrayActions.TryParse(["--tray-action", ((uint)action).ToString()], out var parsed) && parsed == action);
+        Check(TrayActions.IsControl(action) == (action is TrayAction.Office or TrayAction.Balanced or TrayAction.Turbo or TrayAction.Custom or TrayAction.FanBoost or TrayAction.FanAuto or TrayAction.Restore or TrayAction.Keep));
+    }
+    foreach (var input in new string[][] { [], ["--tray-action"], ["--tray-action", "2"], ["--tray-action", "-1"],
+        ["--tray-action", "999"], ["--tray-action", " 10"], ["--tray-action", "10", "11"], ["--other", "10"], ["--tray-action", "FAN_BOOST_ON"] })
+        Check(!TrayActions.TryParse(input, out _));
+    Check(TrayActions.Bit((TrayAction)32) == 0 && TrayActions.State(null, true) == 0);
+});
+
+Test("tray availability follows the production pilot, AC power, freshness and declared capabilities", () =>
+{
+    var clock = new TestClock();
+    var pilot = new ModePilot(clock);
+    pilot.SetJournalWriter(_ => { }); pilot.SetFanJournalWriter(_ => { });
+    pilot.Bind((_, _) => throw new Exception("State query wrote a mode"), _ => Task.CompletedTask, () => true, default);
+    pilot.BindFan((_, _) => throw new Exception("State query wrote a fan command"));
+    TopicSample Fresh(string topic, string json) => Sample(topic, json) with { ReceivedTimestamp = clock.GetTimestamp() };
+    var cap = supportJson[..^1] + ",\"FanSettingsSupport\":1,\"FanBoostBtnSupport\":1,\"TurboModeSupport\":1}";
+    var payload = System.Text.Json.Nodes.JsonNode.Parse(ModePilotPolicy.Evidence.GetProperty("observedConfigurations").GetProperty("0").GetRawText())!;
+    payload["OperatingMode"] = "0";
+    payload["FanBoostBtnSupport"] = true;
+    payload["FanBoostEnable"] = "0";
+    void Observe() { pilot.Observe(Fresh("Customize/SupportInfo", cap)); pilot.Observe(Fresh("Fan/Status", payload.ToJsonString())); }
+    Observe();
+    var state = TrayActions.State(pilot, true);
+    Check((state & TrayActions.Bit(TrayAction.Office)) == 0 && (state & TrayActions.Bit(TrayAction.Balanced)) != 0);
+    Check((state & TrayActions.Bit(TrayAction.Turbo)) != 0 && (state & TrayActions.Bit(TrayAction.Custom)) != 0);
+    Check((state & TrayActions.Bit(TrayAction.FanBoost)) != 0 && (state & TrayActions.Bit(TrayAction.FanAuto)) == 0);
+    Check(((state >> 24) & 7) == 1 && (state & (1u << 28)) != 0);
+    Check((state & (TrayActions.Bit(TrayAction.Restore) | TrayActions.Bit(TrayAction.Keep))) == 0);
+    Check(TrayActions.State(pilot, false) == 0);
+    pilot.UpdatePowerSource(false);
+    Check((TrayActions.State(pilot, true) & 0x3fc00u) == 0, "Battery must disable every hardware operation");
+    pilot.UpdatePowerSource(true);
+    payload["FanBoostEnable"] = "1"; Observe();
+    state = TrayActions.State(pilot, true);
+    Check((state & 0x3c00u) == 0 && (state & TrayActions.Bit(TrayAction.FanAuto)) != 0 && (state & (1u << 29)) != 0);
+    payload["FanBoostEnable"] = "0"; cap = cap.Replace("\"TurboModeSupport\":1", "\"TurboModeSupport\":0"); Observe();
+    Check((TrayActions.State(pilot, true) & TrayActions.Bit(TrayAction.Turbo)) == 0);
+    clock.Advance(TimeSpan.FromSeconds(16));
+    Check((TrayActions.State(pilot, true) & 0x3fc00u) == 0, "Stale observations cannot authorize a tray write");
+});
+
 var failures = new List<string>();
 foreach (var test in cases)
 {

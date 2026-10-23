@@ -40,6 +40,8 @@ jobs:
         run: python scripts/build-evidence-registry.py --check
       - name: Verify pinned offline Lucide assets and license
         run: python scripts/vendor-lucide.py --check
+      - name: Verify generated branding and desktop shortcut contract
+        run: python scripts/check-branding.py
       - name: Build diagnostic CLI
         run: dotnet build src/OpenRevo.Probe/OpenRevo.Probe.csproj -c Release -p:RestoreLockedMode=true --nologo
       - name: Build and package WinUI app

@@ -29,6 +29,14 @@ public sealed partial class MainWindow
 
     private nint LifetimeMessage(nint window, uint message, nuint wParam, nint lParam, nuint id, nuint data)
     {
+        if (message == DesktopLifetime.TrayStateMessage)
+            return _closed || _trayActionPending ? 0 : (nint)OpenRevo.Core.TrayActions.State(_observer?.Pilot, _connected);
+        if (message == DesktopLifetime.TrayActionMessage)
+        {
+            if (wParam <= uint.MaxValue && Enum.IsDefined((OpenRevo.Core.TrayAction)(uint)wParam))
+                RequestTrayAction((OpenRevo.Core.TrayAction)(uint)wParam);
+            return 0;
+        }
         if (message == DesktopLifetime.ShowMessage)
         {
             if (!_closed)

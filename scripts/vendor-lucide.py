@@ -1,6 +1,6 @@
-"""Regenerate the small offline Lucide font and Windows icon; --check needs only Python.
+"""Regenerate the small offline Lucide UI font; --check needs only Python.
 
-Generation uses fonttools 4.60.1 and Pillow. These are development tools only.
+Generation uses fonttools 4.60.1. These are development tools only.
 Source is pinned to the official lucide-static npm archive and verified with SRI.
 """
 import argparse
@@ -19,7 +19,6 @@ INTEGRITY = 'yLAiQB3MWUJEstsEDAwenSA3m7vr1tdLvgnC16Q/XMxRRma0DWwMs8M2bWlvgShrIs1
 NAMES = ['fan', 'layout-dashboard', 'gauge', 'list-checks', 'file-json', 'settings',
          'cpu', 'monitor', 'battery-charging', 'menu', 'chevron-down', 'chevron-up',
          'circle-check', 'triangle-alert', 'circle-alert', 'info', 'x', 'check']
-SIZES = [16, 20, 24, 28, 32, 40, 48, 64, 128, 256]
 ASSETS = ROOT / 'src/OpenRevo.App/Assets'
 MANIFEST = ROOT / 'assets/lucide/manifest.json'
 
@@ -35,13 +34,12 @@ def check():
     for source in (ROOT / 'src/OpenRevo.App').glob('*.cs'):
         if source.name not in ('LucideIcons.cs',):
             assert not re.search(r'new\s+SymbolIcon|Symbol\.|Glyph\s*=\s*"\\u', source.read_text(encoding='utf8')), source
-    print(f'Lucide assets verified: {len(NAMES)} glyphs, ten ICO sizes, hashes, attribution and no legacy app glyphs.')
+    print(f'Lucide assets verified: {len(NAMES)} glyphs, hashes, attribution and no legacy app glyphs.')
 
 
 def generate():
     from fontTools import subset
     from fontTools.ttLib import TTFont
-    from PIL import Image, ImageDraw, ImageFont
     archive = urllib.request.urlopen(f'https://registry.npmjs.org/lucide-static/-/lucide-static-{VERSION}.tgz').read()
     assert base64.b64encode(hashlib.sha512(archive).digest()).decode() == INTEGRITY
     with tarfile.open(fileobj=io.BytesIO(archive), mode='r:gz') as package:
@@ -60,31 +58,13 @@ def generate():
     generated += ''.join(f'        ["{name}"] = "\\u{code}",\n' for name, code in codes.items())
     generated += '    };\n}\n'
     glyph_file = ROOT / 'src/OpenRevo.App/LucideGlyphs.cs'; glyph_file.write_text(generated, encoding='utf8', newline='\n')
-    # Render each physical icon size independently at 8x resolution, then downsample.
-    # The icon artwork is the official fan glyph on the existing teal rounded tile.
-    frames = []
-    for size in SIZES:
-        scale = 8; width = size * scale
-        picture = Image.new('RGBA', (width, width))
-        draw = ImageDraw.Draw(picture)
-        inset = width * .055
-        draw.rounded_rectangle((inset, inset, width-inset-1, width-inset-1), radius=width*.19, fill=(17, 142, 130, 255))
-        face = ImageFont.truetype(str(ASSETS / 'Lucide.ttf'), round(width * .72))
-        glyph = chr(int(codes['fan'], 16)); box = draw.textbbox((0, 0), glyph, font=face)
-        draw.text(((width-(box[2]-box[0]))/2-box[0], (width-(box[3]-box[1]))/2-box[1]), glyph, font=face, fill='white')
-        frame = picture.resize((size, size), Image.Resampling.LANCZOS)
-        # Remove the 1/255 Lanczos halo outside the rounded tile at the corners.
-        for corner in ((0, 0), (size-1, 0), (0, size-1), (size-1, size-1)):
-            frame.putpixel(corner, (0, 0, 0, 0))
-        frames.append(frame)
-    frames[-1].save(ASSETS / 'OpenRevo.ico', format='ICO', sizes=[(s, s) for s in SIZES], append_images=frames[:-1])
-    paths = [ASSETS / 'Lucide.ttf', ASSETS / 'OpenRevo.ico', license_path, glyph_file]
+    paths = [ASSETS / 'Lucide.ttf', license_path, glyph_file]
     manifest = {'package': 'lucide-static', 'version': VERSION, 'source': f'https://registry.npmjs.org/lucide-static/-/lucide-static-{VERSION}.tgz',
                 'integrity': 'sha512-' + INTEGRITY, 'license': 'ISC; inherited Feather icons retain MIT notice',
-                'glyphs': codes, 'icoSizes': SIZES,
+                'glyphs': codes,
                 'sha256': {p.relative_to(ROOT).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}}
     MANIFEST.write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf8', newline='\n')
-    print('Generated offline Lucide subset and DPI-specific icon assets.')
+    print('Generated offline Lucide UI font subset.')
 
 
 if __name__ == '__main__':

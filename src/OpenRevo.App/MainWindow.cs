@@ -97,7 +97,9 @@ public sealed partial class MainWindow : Window
         _root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         var titleBar = new Grid { Height = 44, Padding = new Thickness(16, 0, 140, 0) };
         var brand = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, VerticalAlignment = VerticalAlignment.Center };
-        brand.Children.Add(LucideIcons.Icon("fan", 20));
+        var brandIcon = new Image { Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri("ms-appx:///Assets/OpenRevo.png")), Width = 24, Height = 24 };
+        AutomationProperties.SetAccessibilityView(brandIcon, AccessibilityView.Raw);
+        brand.Children.Add(brandIcon);
         brand.Children.Add(Text("OpenRevo", 14, true));
         brand.Children.Add(Text(AppVersion.Current, 12));
         titleBar.Children.Add(brand);
@@ -181,7 +183,7 @@ public sealed partial class MainWindow : Window
             _themeSettings.Changed += HighContrastChanged;
             RestoreWindowPlacement(); UpdateCaptionColors(); EnablePowerNotifications(); StartSession();
             // Establish XAML focus before the first keyboard accelerator.
-            DispatcherQueue.TryEnqueue(() => { if (!_closed) ((NavigationViewItem)_navigation.MenuItems[0]).Focus(FocusState.Programmatic); });
+            DispatcherQueue.TryEnqueue(() => { if (!_closed && _navigation.SelectedItem is NavigationViewItem selected) selected.Focus(FocusState.Programmatic); });
         };
         AppWindow.Closing += CloseWindow;
         Closed += (_, _) => { _closed = true; _timer.Stop(); };
@@ -339,18 +341,7 @@ public sealed partial class MainWindow : Window
         _auditHint.IsTextSelectionEnabled = true;
         AutomationProperties.SetLiveSetting(_auditHint, AutomationLiveSetting.Polite);
         var saveAudit = new Button { Content = "保存诊断报告" };
-        saveAudit.Click += (_, _) =>
-        {
-            try
-            {
-                var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OpenRevo", "audit-review.json");
-                DiagnosticFile.Write(path, Diagnostics());
-                _auditHint.Text = "报告已保存到：\n" + path;
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            { _auditHint.Text = "无法保存报告，请确认本地目录可写。"; }
-            FrameworkElementAutomationPeer.CreatePeerForElement(_auditHint)?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
-        };
+        saveAudit.Click += (_, _) => SaveAuditReport();
         review.Children.Add(saveAudit); review.Children.Add(_auditHint); panel.Children.Add(Card(review));
         var policy = new StackPanel { Spacing = 12 };
         policy.Children.Add(Text("需保留原厂后台服务。版本不匹配时，请查看设备详情并保存报告；新机型或新版本需要重新验证。"));
@@ -362,6 +353,20 @@ public sealed partial class MainWindow : Window
         diagnostics.Children.Add(_diagnosticText);
         panel.Children.Add(Details("查看会话详情", diagnostics));
         return new ScrollViewer { Content = panel, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
+    }
+
+    private void SaveAuditReport()
+    {
+        try
+        {
+            var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OpenRevo", "audit-review.json");
+            DiagnosticFile.Write(path, Diagnostics());
+            _auditHint.Text = "报告已保存到：\n" + path;
+            ShowNotice("诊断报告已保存", path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        { _auditHint.Text = "无法保存报告，请确认本地目录可写。"; ShowNotice("诊断报告未保存", _auditHint.Text, InfoBarSeverity.Warning); }
+        FrameworkElementAutomationPeer.CreatePeerForElement(_auditHint)?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
     }
 
     private UIElement PilotPage()

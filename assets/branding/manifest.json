@@ -1,0 +1,25 @@
+{
+  "version": "1.1.2",
+  "tool": "image_gen.imagegen (built-in)",
+  "master": "assets/branding/OpenRevo-1.1.2.png",
+  "prompt": "Use case: logo-brand. Asset type: production Windows desktop application icon for OpenRevo, a laptop performance and cooling control utility. Create one impressive, exceptionally refined app icon, front-facing and centered, square canvas. A bold sculptural three-blade turbine / flowing rotational energy emblem, with a subtle visual suggestion of an R through the negative space. Deep teal and luminous mint enamel, restrained cool silver highlights, sophisticated layered depth and immaculate softly rounded edges. A dark graphite rounded-square tile with generous clear separation around the central symbol. Luxurious precision engineering, calm power, contemporary desktop craft. Strong simple silhouette and broad clean shapes that remain unmistakable at 16 px; tiny intricate detail must not be essential. The tile fills about 88 percent of the canvas, with genuinely transparent outside corners and margins. No text, no lettering, no numbers, no extraneous gears, no surrounding scene, no mockup, no multiple proposals, no watermark. Deliver the finished icon only on a truly transparent background.",
+  "processing": "Windows asset encoding only: System.Drawing HighQualityBicubic scaling, ten PNG-backed ICO frames and a 256 px PNG. Generated alpha is preserved.",
+  "icoSizes": [
+    16,
+    20,
+    24,
+    28,
+    32,
+    40,
+    48,
+    64,
+    128,
+    256
+  ],
+  "sha256": {
+    "assets/branding/OpenRevo-1.1.2.png": "626ad65eaed72342dafbe66f8c2637f8d8814bc223aa06eb2257bcbf5cb09bc2",
+    "src/OpenRevo.App/Assets/OpenRevo.ico": "b0c736cfea89d2d82719b465ede2bc48c16d37e839b42ee313fd1c846f152f01",
+    "src/OpenRevo.App/Assets/OpenRevo.png": "e1bf171b64bc9dabbb9d3755760222f35b7ac1d482d6dd91c1747a2ba6a38fb5",
+    "scripts/build-app-icon.ps1": "4ccf2338a2ce2f34b381a2123649aed6e8c2d7d8a3c6793e10c6b3cca7fe3b8a"
+  }
+}
