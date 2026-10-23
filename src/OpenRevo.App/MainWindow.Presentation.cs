@@ -24,8 +24,12 @@ public sealed partial class MainWindow
     private static TextBlock Secondary(string text) => new()
     { Text = text, TextWrapping = TextWrapping.Wrap, Style = (Style)Application.Current.Resources["SecondaryBodyStyle"] };
 
-    private static Expander Details(string title, UIElement content) => new()
-    { Header = title, Content = content, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch };
+    private static Expander Details(string title, UIElement content)
+    {
+        var expander = new Expander { Header = title, Content = content, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch };
+        LucideIcons.Expander(expander);
+        return expander;
+    }
 
     private FrameworkElement ConnectionChrome()
     {
@@ -170,6 +174,7 @@ public sealed partial class MainWindow
         }
         foreach (var text in new[] { _modeResult, _previousPilot, _auditHint })
             text.Visibility = string.IsNullOrWhiteSpace(text.Text) ? Visibility.Collapsed : Visibility.Visible;
+        foreach (var bar in new[] { _modeFeedback, _error, _rangeWarning, _notice }) LucideIcons.Status(bar);
     }
 
     private static string FriendlyControlReason(string detail) => detail

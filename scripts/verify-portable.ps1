@@ -30,6 +30,9 @@ try {
         if (!$entries.ContainsKey($required)) { throw "Missing portable dependency: $required" }
     }
     if (!$entries.ContainsKey('protocol/fan-boost.json')) { throw 'Missing fan control policy.' }
+    foreach ($required in @('Assets/Lucide.ttf','Assets/OpenRevo.ico','ThirdPartyNotices/Lucide-LICENSE.txt','ThirdPartyNotices/lucide.json')) {
+        if (!$entries.ContainsKey($required)) { throw "Missing icon asset or attribution: $required" }
+    }
     $manifestStream = $entries['build-manifest.json'].Open()
     try { $manifestHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($manifestStream)) }
     finally { $manifestStream.Dispose() }
@@ -39,6 +42,12 @@ try {
         try { $digest = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($stream)).ToLowerInvariant() }
         finally { $stream.Dispose() }
         if ($digest -ne $binary.sha256) { throw "Archived binary mismatch: $($binary.path)" }
+    }
+    foreach ($asset in @(@('ThirdPartyNotices/Lucide-LICENSE.txt','assets/lucide/LICENSE.txt'),@('ThirdPartyNotices/lucide.json','assets/lucide/manifest.json'))) {
+        $stream = $entries[$asset[0]].Open()
+        try { $digest = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($stream)) }
+        finally { $stream.Dispose() }
+        if ($digest -ne (Get-FileHash -LiteralPath (Join-Path $root $asset[1])).Hash) { throw "Lucide attribution mismatch: $($asset[0])" }
     }
     $report = [pscustomobject]@{
         checkedAtUtc=[DateTimeOffset]::UtcNow.ToString('o'); archiveSha256=$actual

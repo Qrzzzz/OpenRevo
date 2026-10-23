@@ -20,13 +20,16 @@ try {
     New-Item -ItemType Directory -Path $objectDirectory -Force | Out-Null
     $log = Join-Path $objectDirectory 'build.log'
     $manifest = Join-Path $root 'src\OpenRevo.Background\background.manifest'
-    & $compiler /nologo /O1 /W4 /WX /MT /EHsc /std:c++17 /utf-8 /DUNICODE /D_UNICODE "/Fe:$target" "/Fo:$(Join-Path $objectDirectory 'background.obj')" (Join-Path $root 'src\OpenRevo.Background\main.cpp') /link /SUBSYSTEM:WINDOWS /DYNAMICBASE /NXCOMPAT /CETCOMPAT /MANIFEST:EMBED "/MANIFESTINPUT:$manifest" user32.lib shell32.lib gdi32.lib *> $log
+    $iconResource = Join-Path $objectDirectory 'icons.res'
+    & rc.exe /nologo "/I$(Join-Path $root 'src\OpenRevo.App\Assets')" "/fo$iconResource" (Join-Path $root 'src\OpenRevo.Background\background.rc') *> $log
+    if ($LASTEXITCODE -ne 0) { Get-Content -LiteralPath $log -TotalCount 30; throw 'Lucide icon resource compilation failed.' }
+    & $compiler /nologo /O1 /W4 /WX /MT /EHsc /std:c++17 /utf-8 /DUNICODE /D_UNICODE "/Fe:$target" "/Fo:$(Join-Path $objectDirectory 'background.obj')" (Join-Path $root 'src\OpenRevo.Background\main.cpp') /link /SUBSYSTEM:WINDOWS /DYNAMICBASE /NXCOMPAT /CETCOMPAT /MANIFEST:EMBED "/MANIFESTINPUT:$manifest" $iconResource user32.lib shell32.lib gdi32.lib *> $log
     $status = $LASTEXITCODE
     $content = Get-Content -LiteralPath $log -Raw
     Write-Output $content.Substring(0, [Math]::Min(10000, $content.Length))
     if ($status -ne 0) { throw "轻量后台构建失败（$status）：$log" }
     $testExecutable = Join-Path $objectDirectory 'native-tests.exe'
-    & $compiler /nologo /O1 /W4 /WX /MT /EHsc /std:c++17 /utf-8 /DUNICODE /D_UNICODE "/Fe:$testExecutable" "/Fo:$(Join-Path $objectDirectory 'native-tests.obj')" (Join-Path $root 'src\OpenRevo.Background\native-tests.cpp') /link /SUBSYSTEM:CONSOLE /MANIFEST:EMBED "/MANIFESTINPUT:$manifest" user32.lib *> $log
+    & $compiler /nologo /O1 /W4 /WX /MT /EHsc /std:c++17 /utf-8 /DUNICODE /D_UNICODE "/Fe:$testExecutable" "/Fo:$(Join-Path $objectDirectory 'native-tests.obj')" (Join-Path $root 'src\OpenRevo.Background\native-tests.cpp') /link /SUBSYSTEM:CONSOLE /MANIFEST:EMBED "/MANIFESTINPUT:$manifest" $iconResource user32.lib gdi32.lib *> $log
     if ($LASTEXITCODE -ne 0) { Get-Content -LiteralPath $log -TotalCount 40; throw 'Native tray test build failed.' }
     & $testExecutable *> $log
     $status = $LASTEXITCODE

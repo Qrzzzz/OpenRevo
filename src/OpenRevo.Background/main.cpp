@@ -4,7 +4,7 @@
 #include <shellapi.h>
 #include <string>
 #include <vector>
-#include "tray-renderer.h"
+#include "tray-icon.h"
 
 // No CLR, WinUI, device connection, timers or polling in the resident process.
 constexpr wchar_t WindowClass[] = L"OpenRevo.Background.v1";
@@ -72,24 +72,7 @@ HICON CreateTrayIcon()
     const auto taskbar = FindWindowW(L"Shell_TrayWnd", nullptr);
     const UINT dpi = taskbar ? GetDpiForWindow(taskbar) : GetDpiForSystem();
     const int size = GetSystemMetricsForDpi(SM_CXSMICON, dpi);
-    const auto pixels = RenderTrayPixels(size);
-    BITMAPINFO info{};
-    info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-    info.bmiHeader.biWidth = size; info.bmiHeader.biHeight = -size;
-    info.bmiHeader.biPlanes = 1; info.bmiHeader.biBitCount = 32;
-    void* bits = nullptr;
-    const auto color = CreateDIBSection(nullptr, &info, DIB_RGB_COLORS, &bits, nullptr, 0);
-    const auto mask = CreateBitmap(size, size, 1, 1, nullptr);
-    HICON result = nullptr;
-    if (color && mask)
-    {
-        memcpy(bits, pixels.data(), pixels.size() * sizeof(pixels[0]));
-        ICONINFO icon{}; icon.fIcon = TRUE; icon.hbmColor = color; icon.hbmMask = mask;
-        result = CreateIconIndirect(&icon);
-    }
-    if (color) DeleteObject(color);
-    if (mask) DeleteObject(mask);
-    return result;
+    return LoadLucideIcon(size);
 }
 
 void RefreshTrayIcon(HWND window)

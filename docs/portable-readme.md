@@ -1,4 +1,4 @@
-# OpenRevo 1.1.0
+# OpenRevo 1.1.1
 
 解压整个文件夹，运行 `OpenRevo.exe`。无需另装 .NET 或使用管理员权限。需保留原厂控制中心后台服务，目前仅支持已经验证的机械革命 YAOSHI 机型、BIOS 和后台版本。
 
@@ -45,4 +45,4 @@
 
 先关闭旧版，再将新版完整解压到独立文件夹运行。不要将新旧版文件混合覆盖，也不要同时运行两份监测连接。回退时完整解压旧版运行；主题和窗口状态保存在 `%LOCALAPPDATA%\OpenRevo\preferences.json`，与程序文件及硬件恢复记录分开保存。设置文件缺失或无法读取时使用默认界面设置，不影响设备校验。
 
-验收状态和未执行项目见 `docs/v1.1.0-audit.md`，1.0 基础范围见 `docs/v1.0-acceptance.md`。本版不编辑风扇曲线或手动转速。真实注销／登录自启动验证按用户决定跳过；服务重启保留模拟验证，不将这些项目写为实测通过。此包未签名，公开发布见 https://github.com/Qrzzzz/OpenRevo/releases 。
+验收状态和未执行项目见 `docs/v1.1.1-audit.md`，1.0 基础范围见 `docs/v1.0-acceptance.md`。本版统一使用随包提供的 Lucide 图标，第三方许可见 `ThirdPartyNotices/Lucide-LICENSE.txt`。不编辑风扇曲线或手动转速。真实注销／登录自启动验证按用户决定跳过；服务重启保留模拟验证，不将这些项目写为实测通过。此包未签名，公开发布见 https://github.com/Qrzzzz/OpenRevo/releases 。

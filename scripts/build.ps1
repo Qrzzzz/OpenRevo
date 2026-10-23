@@ -16,6 +16,10 @@ if ($Publish) {
     Invoke-OpenRevoDotnet -Sdk $sdk -ToolArguments @('publish',$project,'-c','Release','-p:Platform=x64','--nologo','-p:RestoreLockedMode=true',$baseOutput,'-o',$output) -Log (Join-Path $logs 'publish.log')
     & (Join-Path $PSScriptRoot 'build-background.ps1') -OutputDirectory $output
     Copy-Item -LiteralPath (Join-Path $root 'docs\portable-readme.md') -Destination (Join-Path $output 'README.md')
+    $notices = Join-Path $output 'ThirdPartyNotices'
+    New-Item -ItemType Directory -Path $notices -Force | Out-Null
+    Copy-Item -LiteralPath (Join-Path $root 'assets\lucide\LICENSE.txt') -Destination (Join-Path $notices 'Lucide-LICENSE.txt')
+    Copy-Item -LiteralPath (Join-Path $root 'assets\lucide\manifest.json') -Destination (Join-Path $notices 'lucide.json')
     $docs = Join-Path $output 'docs'
     $protocol = Join-Path $output 'protocol'
     New-Item -ItemType Directory -Path $docs,$protocol -Force | Out-Null

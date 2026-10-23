@@ -1,0 +1,45 @@
+{
+  "package": "lucide-static",
+  "version": "1.61.0",
+  "source": "https://registry.npmjs.org/lucide-static/-/lucide-static-1.61.0.tgz",
+  "integrity": "sha512-yLAiQB3MWUJEstsEDAwenSA3m7vr1tdLvgnC16Q/XMxRRma0DWwMs8M2bWlvgShrIs1m2mWMJ+0AiahqQO4GrA==",
+  "license": "ISC; inherited Feather icons retain MIT notice",
+  "glyphs": {
+    "fan": "e379",
+    "layout-dashboard": "e1c1",
+    "gauge": "e1bf",
+    "list-checks": "e1d0",
+    "file-json": "e36b",
+    "settings": "e154",
+    "cpu": "e0a9",
+    "monitor": "e11d",
+    "battery-charging": "e054",
+    "menu": "e115",
+    "chevron-down": "e06d",
+    "chevron-up": "e070",
+    "circle-check": "e226",
+    "triangle-alert": "e193",
+    "circle-alert": "e077",
+    "info": "e0f9",
+    "x": "e1b2",
+    "check": "e06c"
+  },
+  "icoSizes": [
+    16,
+    20,
+    24,
+    28,
+    32,
+    40,
+    48,
+    64,
+    128,
+    256
+  ],
+  "sha256": {
+    "src/OpenRevo.App/Assets/Lucide.ttf": "4791fbce390f6be8416ed0096cbbb62a752f5f6471f6f034d542bd533aff3530",
+    "src/OpenRevo.App/Assets/OpenRevo.ico": "0c808c81d1066192ef795d4924b108e19e920ced53583f451f65f1aec801db73",
+    "assets/lucide/LICENSE.txt": "b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57",
+    "src/OpenRevo.App/LucideGlyphs.cs": "dedf5b66bf4e39a0003989982948229b44ba1c9aae719562df010df741547a1c"
+  }
+}

@@ -97,13 +97,14 @@ public sealed partial class MainWindow : Window
         _root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         var titleBar = new Grid { Height = 44, Padding = new Thickness(16, 0, 140, 0) };
         var brand = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, VerticalAlignment = VerticalAlignment.Center };
-        brand.Children.Add(new FontIcon { Glyph = "\uE9D9", FontSize = 17 });
+        brand.Children.Add(LucideIcons.Icon("fan", 20));
         brand.Children.Add(Text("OpenRevo", 14, true));
         brand.Children.Add(Text(AppVersion.Current, 12));
         titleBar.Children.Add(brand);
         _root.Children.Add(titleBar);
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(titleBar);
+        AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "OpenRevo.ico"));
         _root.ActualThemeChanged += (_, _) => UpdateCaptionColors();
         _navigation.IsBackButtonVisible = NavigationViewBackButtonVisible.Collapsed;
         _navigation.IsSettingsVisible = false;
@@ -111,14 +112,16 @@ public sealed partial class MainWindow : Window
         _navigation.HorizontalContentAlignment = HorizontalAlignment.Stretch;
         _navigation.VerticalContentAlignment = VerticalAlignment.Stretch;
         _navigation.OpenPaneLength = 204;
+        _navigation.PaneToggleButtonStyle = (Style)Application.Current.Resources["LucidePaneToggleStyle"];
+        _notice.CloseButtonStyle = (Style)Application.Current.Resources["LucideCloseStyle"];
         _navigation.PaneDisplayMode = NavigationViewPaneDisplayMode.Auto;
         _navigation.CompactModeThresholdWidth = 800;
         _navigation.ExpandedModeThresholdWidth = 1050;
-        _navigation.MenuItems.Add(Nav("设备概览", "overview", Symbol.Home));
-        _navigation.MenuItems.Add(Nav("性能模式", "pilot", Symbol.Play));
-        _navigation.MenuItems.Add(Nav("功能支持", "capabilities", Symbol.AllApps));
-        _navigation.FooterMenuItems.Add(Nav("原始数据", "raw", Symbol.Document));
-        _navigation.FooterMenuItems.Add(Nav("设置与诊断", "settings", Symbol.Setting));
+        _navigation.MenuItems.Add(Nav("设备概览", "overview", "layout-dashboard"));
+        _navigation.MenuItems.Add(Nav("性能模式", "pilot", "gauge"));
+        _navigation.MenuItems.Add(Nav("功能支持", "capabilities", "list-checks"));
+        _navigation.FooterMenuItems.Add(Nav("原始数据", "raw", "file-json"));
+        _navigation.FooterMenuItems.Add(Nav("设置与诊断", "settings", "settings"));
         _navigation.SelectionChanged += (_, e) =>
         {
             if (e.SelectedItem is NavigationViewItem item && item.Tag is string tag) ShowPage(tag);
@@ -190,8 +193,8 @@ public sealed partial class MainWindow : Window
         _root.KeyboardAccelerators.Add(saveShortcut);
     }
 
-    private static NavigationViewItem Nav(string label, string tag, Symbol symbol) => new()
-    { Content = label, Tag = tag, Icon = new SymbolIcon(symbol) };
+    private static NavigationViewItem Nav(string label, string tag, string icon) => new()
+    { Content = label, Tag = tag, Icon = LucideIcons.Icon(icon) };
 
     private void UpdateCaptionColors()
     {
@@ -232,12 +235,12 @@ public sealed partial class MainWindow : Window
     private UIElement OverviewPage()
     {
         var panel = Section("设备概览", "查看温度、风扇、电量和当前性能模式。");
-        AddMetric("cpu", "处理器温度", "\uE950");
-        AddMetric("gpu", "显卡温度", "\uE7F4");
-        AddMetric("battery", "电池电量", "\uE83F");
-        AddMetric("cpuFan", "CPU 风扇", "\uE9CA");
-        AddMetric("gpuFan", "GPU 风扇", "\uE9CA");
-        AddMetric("mode", "当前模式", "\uE945");
+        AddMetric("cpu", "处理器温度", "cpu");
+        AddMetric("gpu", "显卡温度", "monitor");
+        AddMetric("battery", "电池电量", "battery-charging");
+        AddMetric("cpuFan", "CPU 风扇", "fan");
+        AddMetric("gpuFan", "GPU 风扇", "fan");
+        AddMetric("mode", "当前模式", "gauge");
         panel.Children.Add(_metrics);
         panel.Children.Add(_sensorNotice);
         var config = new StackPanel { Spacing = 10 };
@@ -256,7 +259,7 @@ public sealed partial class MainWindow : Window
     {
         var panel = new StackPanel { Spacing = 10 };
         var header = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        header.Children.Add(new FontIcon { Glyph = glyph, FontSize = 16 }); header.Children.Add(Text(label));
+        header.Children.Add(LucideIcons.Icon(glyph, 18)); header.Children.Add(Text(label));
         var value = Text("—", 30, true);
         var detail = Secondary("等待数据");
         var age = Secondary("尚未收到状态");
@@ -298,6 +301,7 @@ public sealed partial class MainWindow : Window
         _topic.Header = "数据来源";
         foreach (var topic in ReadProtocol.Topics) _topic.Items.Add(new ComboBoxItem { Content = TopicLabel(topic), Tag = topic });
         _topic.SelectedIndex = 0;
+        LucideIcons.Combo(_topic);
         AutomationProperties.SetName(_topic, "状态主题");
         AutomationProperties.SetName(_raw, "厂商原始状态 JSON");
         _topic.SelectionChanged += (_, _) => { _rawKey = ""; RenderRaw(force: true); };
@@ -313,6 +317,7 @@ public sealed partial class MainWindow : Window
     {
         var panel = Section("设置与诊断", $"OpenRevo {AppVersion.Current} · 适用于当前已验证的机型与后台版本");
         var theme = new ComboBox { Header = "应用主题", HorizontalAlignment = HorizontalAlignment.Left, MinWidth = 220 };
+        LucideIcons.Combo(theme);
         theme.Items.Add("跟随系统"); theme.Items.Add("浅色"); theme.Items.Add("深色"); theme.SelectedIndex = (int)_preferences.Theme;
         theme.SelectionChanged += (_, _) =>
         {

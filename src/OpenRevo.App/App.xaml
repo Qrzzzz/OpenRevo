@@ -4,6 +4,24 @@
   <Application.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries>
     <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
   </ResourceDictionary.MergedDictionaries>
+  <Style x:Key="LucidePaneToggleStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Width" Value="40" />
+    <Setter Property="Height" Value="40" />
+    <Setter Property="ContentTemplate"><Setter.Value><DataTemplate>
+      <FontIcon FontFamily="ms-appx:///Assets/Lucide.ttf#lucide" Glyph="&#xE115;" FontSize="20" IsTextScaleFactorEnabled="False" AutomationProperties.AccessibilityView="Raw" />
+    </DataTemplate></Setter.Value></Setter>
+  </Style>
+  <Style x:Key="LucideCloseStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="6" />
+    <Setter Property="ContentTemplate"><Setter.Value><DataTemplate>
+      <FontIcon FontFamily="ms-appx:///Assets/Lucide.ttf#lucide" Glyph="&#xE1B2;" FontSize="16" IsTextScaleFactorEnabled="False" AutomationProperties.AccessibilityView="Raw" />
+    </DataTemplate></Setter.Value></Setter>
+  </Style>
   <Style x:Key="SurfaceCardStyle" TargetType="Border">
     <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
     <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />

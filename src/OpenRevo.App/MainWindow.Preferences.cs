@@ -91,6 +91,7 @@ public sealed partial class MainWindow
     private void ShowNotice(string title, string message, InfoBarSeverity severity = InfoBarSeverity.Success)
     {
         _notice.Title = title; _notice.Message = message; _notice.Severity = severity; _notice.IsOpen = true;
+        LucideIcons.Status(_notice);
         FrameworkElementAutomationPeer.CreatePeerForElement(_notice)?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
     }
 }

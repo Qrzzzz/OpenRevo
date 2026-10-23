@@ -38,6 +38,8 @@ jobs:
         run: ./scripts/test.ps1
       - name: Check protocol evidence registry
         run: python scripts/build-evidence-registry.py --check
+      - name: Verify pinned offline Lucide assets and license
+        run: python scripts/vendor-lucide.py --check
       - name: Build diagnostic CLI
         run: dotnet build src/OpenRevo.Probe/OpenRevo.Probe.csproj -c Release -p:RestoreLockedMode=true --nologo
       - name: Build and package WinUI app
