@@ -28,7 +28,8 @@ internal sealed record WindowBounds(int X, int Y, int Width, int Height)
 internal enum AppThemePreference { System, Light, Dark }
 
 internal sealed record AppPreferences(AppThemePreference Theme = AppThemePreference.System, WindowBounds? Window = null, bool Maximized = false,
-    bool StayInTray = true)
+    bool StayInTray = true, bool GlowEnabled = true, GlowDisplay GlowDisplay = GlowDisplay.Preset,
+    GlowPalette GlowPalette = GlowPalette.Spectrum, bool GlowMotion = false)
 {
     private static readonly JsonSerializerOptions Options = new()
     { WriteIndented = true, Converters = { new JsonStringEnumConverter() } };
@@ -41,6 +42,8 @@ internal sealed record AppPreferences(AppThemePreference Theme = AppThemePrefere
             return settings with
             {
                 Theme = Enum.IsDefined(settings.Theme) ? settings.Theme : AppThemePreference.System,
+                GlowDisplay = Enum.IsDefined(settings.GlowDisplay) ? settings.GlowDisplay : GlowDisplay.Preset,
+                GlowPalette = Enum.IsDefined(settings.GlowPalette) ? settings.GlowPalette : GlowPalette.Spectrum,
                 Window = settings.Window is { HasSize: true } ? settings.Window : null
             };
         }

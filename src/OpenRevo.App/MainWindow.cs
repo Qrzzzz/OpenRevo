@@ -26,7 +26,7 @@ public sealed partial class MainWindow : Window
 {
     private readonly Grid _root = new();
     private readonly NavigationView _navigation = new();
-    private readonly Grid _metrics = new() { ColumnSpacing = 12, RowSpacing = 12 };
+    private readonly Grid _metrics = new() { ColumnSpacing = 20, RowSpacing = 20 };
     private readonly List<Border> _metricCards = [];
     private readonly Dictionary<string, (TextBlock Value, TextBlock Detail, TextBlock Age)> _metricText = [];
     private readonly Dictionary<string, TopicSample> _samples = new(StringComparer.Ordinal);
@@ -107,7 +107,7 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(titleBar);
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "OpenRevo.ico"));
-        _root.ActualThemeChanged += (_, _) => UpdateCaptionColors();
+        _root.ActualThemeChanged += (_, _) => { UpdateCaptionColors(); RenderMetricGlows(); };
         _navigation.IsBackButtonVisible = NavigationViewBackButtonVisible.Collapsed;
         _navigation.IsSettingsVisible = false;
         _navigation.IsTitleBarAutoPaddingEnabled = false;
@@ -186,6 +186,8 @@ public sealed partial class MainWindow : Window
             DispatcherQueue.TryEnqueue(() => { if (!_closed && _navigation.SelectedItem is NavigationViewItem selected) selected.Focus(FocusState.Programmatic); });
         };
         AppWindow.Closing += CloseWindow;
+        AppWindow.Changed += (_, _) => RenderMetricGlows();
+        Activated += (_, e) => { _windowActive = e.WindowActivationState != WindowActivationState.Deactivated; RenderMetricGlows(); };
         Closed += (_, _) => { _closed = true; _timer.Stop(); };
         var refreshShortcut = new KeyboardAccelerator { Key = VirtualKey.R, Modifiers = VirtualKeyModifiers.Control };
         refreshShortcut.Invoked += (_, e) => { if (_connected) _observer?.RequestRefresh(); e.Handled = true; };
@@ -214,7 +216,7 @@ public sealed partial class MainWindow : Window
     }
 
     private void HighContrastChanged(ThemeSettings sender, object args) =>
-        DispatcherQueue.TryEnqueue(() => { if (!_closed) UpdateCaptionColors(); });
+        DispatcherQueue.TryEnqueue(() => { if (!_closed) { UpdateCaptionColors(); RenderMetricGlows(); } });
 
     private static TextBlock Text(string text, double size = 14, bool semibold = false) => new()
     { Text = text, FontSize = size, TextWrapping = TextWrapping.Wrap, FontWeight = semibold ? FontWeights.SemiBold : FontWeights.Normal };
@@ -243,7 +245,10 @@ public sealed partial class MainWindow : Window
         AddMetric("cpuFan", "CPU 风扇", "fan");
         AddMetric("gpuFan", "GPU 风扇", "fan");
         AddMetric("mode", "当前模式", "gauge");
-        panel.Children.Add(_metrics);
+        panel.Children.Add(GlowToolbar());
+        _metricStage.Children.Add(_metricGlowHost); _metricStage.Children.Add(_metrics);
+        _metricGlowHost.Loaded += (_, _) => InitializeMetricGlows();
+        panel.Children.Add(_metricStage);
         panel.Children.Add(_sensorNotice);
         var config = new StackPanel { Spacing = 10 };
         config.Children.Add(Secondary("以下是模式设定值，并非当前实际功耗。"));
@@ -632,6 +637,7 @@ public sealed partial class MainWindow : Window
         _configuration.Text = mode is null ? "等待厂商配置状态" : $"CPU PL1  {mode.Text("CPU_PL1") ?? "—"}    PL2  {mode.Text("CPU_PL2") ?? "—"}    PL4  {mode.Text("CPU_PL4") ?? "—"}\nGPU TGP  {mode.Text("GPU_ConfigurableTGPTarget") ?? "—"}    DynamicBoost  {mode.Text("GPU_DynamicBoost") ?? "—"}\n{Age(mode)}";
         var warning = DeviceAudit.TgpInconsistency(mode); _rangeWarning.IsOpen = warning is not null; _rangeWarning.Message = warning ?? "";
         RenderPresentation();
+        RenderMetricGlows();
         if (_page == "capabilities") RenderCapabilities();
         if (_page == "raw") RenderRaw();
     }
@@ -699,6 +705,8 @@ public sealed partial class MainWindow : Window
             protocolSchemaVersion = ProtocolEvidence.Registry.GetProperty("schemaVersion").GetInt32(),
             sessionHealth = _observer?.Health.Snapshot(_connected), previousSessions = _previousSessions.ToArray(),
             powerNotificationsAvailable = _powerNotificationsAvailable,
+            appearance = new { _preferences.GlowEnabled, _preferences.GlowDisplay, _preferences.GlowPalette, _preferences.GlowMotion,
+                animationsRunning = _glowRunning, glowVisuals = _metricGlows.Count, systemAnimations = _uiSettings.AnimationsEnabled },
             topicHealth = ReadProtocol.Topics.Select(topic => new { topic, received = _samples.ContainsKey(topic),
                 freshness = Sample(topic)?.Freshness(TimeProvider.System, _connected).ToString() ?? "Missing",
                 ageSeconds = Sample(topic)?.Age().TotalSeconds }).ToArray(),

@@ -1144,6 +1144,65 @@ Test("tray availability follows the production pilot, AC power, freshness and de
     Check((TrayActions.State(pilot, true) & 0x3fc00u) == 0, "Stale observations cannot authorize a tray write");
 });
 
+Test("card appearance preserves existing preferences and defaults to static preset light", () =>
+{
+    var path = Path.GetTempFileName();
+    try
+    {
+        File.WriteAllText(path, """{"Theme":"Dark","StayInTray":false,"Window":{"X":10,"Y":20,"Width":800,"Height":600}}""");
+        var old = AppPreferences.Load(path);
+        Check(old.Theme == AppThemePreference.Dark && !old.StayInTray && old.Window?.Width == 800);
+        Check(old.GlowEnabled && !old.GlowMotion && old.GlowDisplay == GlowDisplay.Preset && old.GlowPalette == GlowPalette.Spectrum);
+        var changed = old with { GlowDisplay = GlowDisplay.Status, GlowPalette = GlowPalette.Cyberpunk, GlowMotion = true };
+        changed.Save(path); Check(AppPreferences.Load(path) == changed);
+        File.WriteAllText(path, """{"Theme":"Light","GlowDisplay":999,"GlowPalette":999,"GlowMotion":true}""");
+        var future = AppPreferences.Load(path);
+        Check(future.Theme == AppThemePreference.Light && future.GlowMotion && future.GlowDisplay == GlowDisplay.Preset && future.GlowPalette == GlowPalette.Spectrum);
+    }
+    finally { File.Delete(path); }
+});
+Test("preset palettes contain six independent card colors and four distinct styles", () =>
+{
+    var palettes = Enum.GetValues<GlowPalette>();
+    Check(palettes.Length == 4 && palettes.Select(GlowAppearance.Name).Distinct().Count() == 4);
+    foreach (var palette in palettes)
+    {
+        var colors = GlowAppearance.Colors(palette);
+        Check(colors.Length == 6 && colors.Distinct().Count() == 6);
+        var first = colors[0]; colors[0] = default;
+        Check(GlowAppearance.Colors(palette)[0] == first, "Callers must not alter stored palette colors");
+    }
+});
+Test("status light moves from blue through violet to coral without yellow or green", () =>
+{
+    Check(GlowAppearance.LoadColor(0, true) == GlowAppearance.Blue && GlowAppearance.LoadColor(50, true) == GlowAppearance.Blue);
+    Check(GlowAppearance.LoadColor(80, true) == GlowAppearance.Violet && GlowAppearance.LoadColor(95, true) == GlowAppearance.Coral);
+    for (var load = 0; load <= 100; load++)
+    {
+        var color = GlowAppearance.LoadColor(load, true);
+        Check(color.G < color.B && color.G < Math.Max(color.R, color.B), "Green/yellow must not enter the status ramp");
+    }
+});
+Test("unavailable and invalid telemetry uses neutral light instead of a normal or warning state", () =>
+{
+    foreach (var value in new double?[] { null, double.NaN, double.PositiveInfinity, -1, 101 })
+        Check(GlowAppearance.LoadColor(value, true) == GlowAppearance.Muted);
+    Check(GlowAppearance.LoadColor(100, false) == GlowAppearance.Muted);
+    Check(GlowAppearance.BatteryColor(100, true) == GlowAppearance.Blue && GlowAppearance.BatteryColor(10, true) == GlowAppearance.Coral);
+    Check(GlowAppearance.BatteryColor(null, true) == GlowAppearance.Muted && GlowAppearance.BatteryColor(5, false) == GlowAppearance.Muted);
+});
+Test("ambient motion needs user opt-in, visible active overview and system animation permission", () =>
+{
+    Check(GlowAppearance.Animate(true, true, true, true, true, true, false));
+    Check(!GlowAppearance.Animate(false, true, true, true, true, true, false));
+    Check(!GlowAppearance.Animate(true, false, true, true, true, true, false));
+    Check(!GlowAppearance.Animate(true, true, false, true, true, true, false));
+    Check(!GlowAppearance.Animate(true, true, true, false, true, true, false));
+    Check(!GlowAppearance.Animate(true, true, true, true, false, true, false));
+    Check(!GlowAppearance.Animate(true, true, true, true, true, false, false));
+    Check(!GlowAppearance.Animate(true, true, true, true, true, true, true));
+});
+
 var failures = new List<string>();
 foreach (var test in cases)
 {

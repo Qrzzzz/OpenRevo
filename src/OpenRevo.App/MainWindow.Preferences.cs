@@ -64,6 +64,7 @@ public sealed partial class MainWindow
         if (_closed) return;
         CaptureWindowPlacement();
         _closed = true;
+        DisposeMetricGlows();
         _updateLifetime.Cancel();
         _root.IsHitTestVisible = false;
         _timer.Stop();
