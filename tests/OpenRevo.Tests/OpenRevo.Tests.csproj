@@ -5,4 +5,5 @@
   <ItemGroup><Compile Include="..\..\src\OpenRevo.App\GlowAppearance.cs" Link="GlowAppearance.cs" /></ItemGroup>
   <ItemGroup><Compile Include="..\..\src\OpenRevo.App\UiSampleBuffer.cs" Link="UiSampleBuffer.cs" /></ItemGroup>
   <ItemGroup><Compile Include="..\..\src\OpenRevo.App\StartupRegistration.cs" Link="StartupRegistration.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="..\..\src\OpenRevo.App\MetricCardAppearance.cs" Link="MetricCardAppearance.cs" /></ItemGroup>
 </Project>

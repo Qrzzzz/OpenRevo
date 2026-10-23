@@ -1,4 +1,4 @@
-using System.Numerics;
+﻿using System.Numerics;
 using Microsoft.UI.Composition;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -76,7 +76,7 @@ public sealed partial class MainWindow
             motion.IsEnabled = enabled.IsOn;
             description.Text = status
                 ? "蓝色为常态，紫色过渡至珊瑚红：CPU／GPU 按占用，风扇按输出，电池按低电量显示。当前模式有效时为蓝色；过期、缺失或断开后为灰色。颜色仅辅助查看，不代表故障报警。"
-                : "整组卡片共用一片柔和色雾，不同色彩在背景中自然融合。卡片保留轻微染色，让文字保持清晰。";
+                : "整组卡片共用一片柔和色雾，不同色彩在背景中自然融合。卡片保留轻微染色，仅主读数使用呼应的主题色。";
             swatches.Children.Clear();
             foreach (var color in GlowAppearance.Colors(_preferences.GlowPalette))
                 swatches.Children.Add(new Border { Width = 42, Height = 6, CornerRadius = new CornerRadius(3), Background = new SolidColorBrush(GlowColor(color)) });
@@ -159,6 +159,14 @@ public sealed partial class MainWindow
         _glowCaption.Text = highContrast ? "系统对比度主题 · 光效已暂停" : !enabled ? "卡片光效已关闭" :
             (_preferences.GlowDisplay == GlowDisplay.Status ? "状态配色 · 蓝 → 紫 → 珊瑚红" : GlowAppearance.Name(_preferences.GlowPalette))
                 + (_preferences.GlowMotion ? animate ? " · 动态流光" : " · 动态已暂停" : " · 静态光晕");
+        var light = _root.ActualTheme == ElementTheme.Light;
+        var colors = _preferences.GlowDisplay == GlowDisplay.Status ? StatusGlowColors() : GlowAppearance.Colors(_preferences.GlowPalette);
+        // Apply independently of glow caching: a fresh value can become stale
+        // while a preset hue remains unchanged, or the glow can be disabled.
+        var cardKeys = new[] { "cpu", "gpu", "battery", "cpuFan", "gpuFan", "mode" };
+        for (var i = 0; i < cardKeys.Length; i++)
+            if (_metricViews.TryGetValue(cardKeys[i], out var cardView))
+                cardView.ApplyTheme(new MetricCardTheme(colors[i], light, enabled && colors[i] != GlowAppearance.Muted), enabled);
         if (_glowContainer is null) return;
         _glowContainer.IsVisible = enabled && _page == "overview";
         if (!enabled)
@@ -169,10 +177,8 @@ public sealed partial class MainWindow
             return;
         }
         if (_page != "overview") return;
-        var light = _root.ActualTheme == ElementTheme.Light;
         var key = $"{light}:{_preferences.GlowDisplay}:{_preferences.GlowPalette}";
         if (_glowVisualKey != key) { foreach (var glow in _metricGlows) glow.Color = null; _glowVisualKey = key; }
-        var colors = _preferences.GlowDisplay == GlowDisplay.Status ? StatusGlowColors() : GlowAppearance.Colors(_preferences.GlowPalette);
         for (var i = 0; i < _metricGlows.Count; i++)
         {
             var glow = _metricGlows[i]; var color = colors[i];
@@ -223,6 +229,7 @@ public sealed partial class MainWindow
     private void DisposeMetricGlows()
     {
         SetGlowMotion(false);
+        foreach (var card in _metricViews.Values) card.DisposeWatermark();
         ElementCompositionPreview.SetElementChildVisual(_metricGlowHost, null);
         foreach (var glow in _metricGlows) { glow.Visual.Dispose(); glow.Halo.Dispose(); }
         _metricGlows.Clear(); _glowContainer?.Dispose(); _glowContainer = null;

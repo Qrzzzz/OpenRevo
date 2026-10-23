@@ -1,4 +1,4 @@
-using System.Buffers.Binary;
+﻿using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -1201,6 +1201,53 @@ Test("ambient motion needs user opt-in, visible active overview and system anima
     Check(!GlowAppearance.Animate(true, true, true, true, false, true, false));
     Check(!GlowAppearance.Animate(true, true, true, true, true, false, false));
     Check(!GlowAppearance.Animate(true, true, true, true, true, true, true));
+});
+
+Test("metric readings separate units, group fan RPM and retain valid zero", () =>
+{
+    Check(MetricReading.Numeric(2900, "RPM", 0, 20000, true) == new MetricReading("2,900", "RPM", true));
+    Check(MetricReading.Numeric(0, "%", 0, 100) == new MetricReading("0", "%", true));
+    Check(MetricReading.Numeric(-5.5, "°C", -20, 150) == new MetricReading("-5.5", "°C", true));
+    foreach (var value in new double?[] { null, double.NaN, double.PositiveInfinity, -21, 151 })
+        Check(MetricReading.Numeric(value, "°C", -20, 150) == new MetricReading("—", "", false));
+});
+Test("metric modes are compact while unknown modes remain unavailable", () =>
+{
+    Check(new[] { "0", "1", "2", "3" }.Select(MetricReading.Mode).All(m => m.Available && m.Unit == ""));
+    Check(MetricReading.Mode("3").Value == "自定义");
+    Check(!MetricReading.Mode(null).Available && !MetricReading.Mode("4").Available);
+});
+Test("primary accent is removed for missing, cached, stale, disconnected or disabled readings", () =>
+{
+    var theme = new MetricCardTheme(GlowAppearance.Blue, true, true);
+    Check(theme.PrimaryInk(true, SampleFreshness.Current) is not null);
+    foreach (var state in new SampleFreshness?[] { null, SampleFreshness.Cached, SampleFreshness.Stale, SampleFreshness.Disconnected })
+        Check(theme.PrimaryInk(true, state) is null);
+    Check(theme.PrimaryInk(false, SampleFreshness.Current) is null);
+    Check((theme with { Enabled = false }).PrimaryInk(true, SampleFreshness.Current) is null);
+});
+Test("all preset and status inks stay restrained and readable on light and dark card surfaces", () =>
+{
+    var accents = Enum.GetValues<GlowPalette>().SelectMany(GlowAppearance.Colors)
+        .Concat(Enumerable.Range(0, 101).Select(n => GlowAppearance.LoadColor(n, true)));
+    foreach (var light in new[] { true, false })
+    foreach (var accent in accents)
+    {
+        var ink = MetricCardTheme.ReadableInk(accent, light);
+        Check(Math.Max(ink.R, Math.Max(ink.G, ink.B)) - Math.Min(ink.R, Math.Min(ink.G, ink.B)) <= 64, "Primary type must remain near neutral");
+        Check(MetricCardTheme.Contrast(ink, GlowRgb.Hex(light ? 0xFBFBFEu : 0x25272Eu)) >= 5.5);
+        // Neutral mixing must preserve the dominant hue channel.
+        if (accent.R > accent.B) Check(ink.R > ink.B);
+        if (accent.B > accent.R) Check(ink.B > ink.R);
+    }
+});
+Test("compact metric timestamps distinguish history, stale and retained cache", () =>
+{
+    Check(MetricCardTheme.Timestamp(null, TimeSpan.Zero) == ("等待数据", "尚未收到"));
+    Check(MetricCardTheme.Timestamp(SampleFreshness.Current, TimeSpan.FromSeconds(-2)) == ("实时", "0 秒前"));
+    Check(MetricCardTheme.Timestamp(SampleFreshness.Cached, TimeSpan.FromSeconds(4)).Status == "缓存");
+    Check(MetricCardTheme.Timestamp(SampleFreshness.Stale, TimeSpan.FromMinutes(2)) == ("未更新", "2 分钟前"));
+    Check(MetricCardTheme.Timestamp(SampleFreshness.Disconnected, TimeSpan.FromSeconds(10)).Status == "历史");
 });
 
 var failures = new List<string>();

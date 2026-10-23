@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.UI;
@@ -28,7 +28,7 @@ public sealed partial class MainWindow : Window
     private readonly NavigationView _navigation = new();
     private readonly Grid _metrics = new() { ColumnSpacing = 20, RowSpacing = 20 };
     private readonly List<Border> _metricCards = [];
-    private readonly Dictionary<string, (TextBlock Value, TextBlock Detail, TextBlock Age)> _metricText = [];
+    private readonly Dictionary<string, MetricCardView> _metricViews = [];
     private readonly Dictionary<string, TopicSample> _samples = new(StringComparer.Ordinal);
     private UiSampleBuffer _pendingSamples = new();
     private readonly Dictionary<string, UIElement> _pages = [];
@@ -244,7 +244,7 @@ public sealed partial class MainWindow : Window
         AddMetric("battery", "电池电量", "battery-charging");
         AddMetric("cpuFan", "CPU 风扇", "fan");
         AddMetric("gpuFan", "GPU 风扇", "fan");
-        AddMetric("mode", "当前模式", "gauge");
+        AddMetric("mode", "性能模式", "gauge");
         panel.Children.Add(GlowToolbar());
         _metricStage.Children.Add(_metricGlowHost); _metricStage.Children.Add(_metrics);
         _metricGlowHost.Loaded += (_, _) => InitializeMetricGlows();
@@ -264,16 +264,8 @@ public sealed partial class MainWindow : Window
 
     private void AddMetric(string key, string label, string glyph)
     {
-        var panel = new StackPanel { Spacing = 10 };
-        var header = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        header.Children.Add(LucideIcons.Icon(glyph, 18)); header.Children.Add(Text(label));
-        var value = Text("—", 30, true);
-        var detail = Secondary("等待数据");
-        var age = Secondary("尚未收到状态");
-        panel.Children.Add(header); panel.Children.Add(value); panel.Children.Add(detail); panel.Children.Add(age);
-        var card = Card(panel); card.MinHeight = 150;
-        AutomationProperties.SetName(card, label);
-        _metricText[key] = (value, detail, age); _metricCards.Add(card); _metrics.Children.Add(card);
+        var view = new MetricCardView(label, glyph, key == "mode");
+        _metricViews[key] = view; _metricCards.Add(view.Surface); _metrics.Children.Add(view.Surface);
     }
 
     private void LayoutMetrics()
@@ -575,12 +567,8 @@ public sealed partial class MainWindow : Window
         return $"{prefix} · {(seconds < 60 ? $"{seconds:0} 秒前" : $"{seconds / 60:0} 分钟前")}";
     }
 
-    private void UpdateMetric(string key, TopicSample? sample, string value, string detail)
-    {
-        var text = _metricText[key]; text.Value.Text = value; text.Detail.Text = detail; text.Age.Text = Age(sample);
-        text.Value.Opacity = 1;
-        AutomationProperties.SetName(text.Value, $"{value}，{detail}，{text.Age.Text}");
-    }
+    private void UpdateMetric(string key, TopicSample? sample, MetricReading value, MetricDetail detail) =>
+        _metricViews[key].SetContent(value, detail, sample?.Freshness(TimeProvider.System, _connected), sample?.Age() ?? TimeSpan.Zero);
 
     private static string Number(TopicSample? sample, string field, string unit, double minimum, double maximum)
     {
@@ -625,15 +613,16 @@ public sealed partial class MainWindow : Window
             (latest is null ? "暂无异常" : $"最近诊断：{latest.Code}\n{latest.Message}\n{latest.NextStep}");
         var cpu = Sample("System/CpuInfo"); var gpu = Sample("System/GpuInfo");
         var fan = Sample("System/FanInfo"); var battery = Sample("System/BatteryInfo"); var mode = Sample("Fan/Status");
-        UpdateMetric("cpu", cpu, Number(cpu, "CpuTemperature", " °C", -20, 150), $"占用 {Number(cpu, "CpuUsage", "%", 0, 100)}");
-        UpdateMetric("gpu", gpu, Number(gpu, "GpuTemperature", " °C", -20, 150), $"占用 {Number(gpu, "GpuUsage", "%", 0, 100)}");
-        UpdateMetric("battery", battery, Number(battery, "BatteryLifePercent", "%", 0, 100), mode?.Text("IsAC") switch
-        { "True" or "true" => "已接通电源", "False" or "false" => "使用电池供电", _ => "供电状态待确认" });
-        UpdateMetric("cpuFan", fan, Number(fan, "CpuFanRpm", " RPM", 0, 20000), $"风扇输出 {Number(fan, "CpuFanDuty", "%", 0, 100)}");
-        UpdateMetric("gpuFan", fan, Number(fan, "GpuFanRpm", " RPM", 0, 20000), $"风扇输出 {Number(fan, "GpuFanDuty", "%", 0, 100)}");
+        UpdateMetric("cpu", cpu, MetricReading.Numeric(cpu?.Number("CpuTemperature"), "°C", -20, 150), new MetricDetail("占用率", Number(cpu, "CpuUsage", "%", 0, 100)));
+        UpdateMetric("gpu", gpu, MetricReading.Numeric(gpu?.Number("GpuTemperature"), "°C", -20, 150), new MetricDetail("占用率", Number(gpu, "GpuUsage", "%", 0, 100)));
+        UpdateMetric("battery", battery, MetricReading.Numeric(battery?.Number("BatteryLifePercent"), "%", 0, 100), new MetricDetail("供电方式", mode?.Text("IsAC") switch
+        { "True" or "true" => "交流电", "False" or "false" => "电池供电", _ => "待确认" }));
+        UpdateMetric("cpuFan", fan, MetricReading.Numeric(fan?.Number("CpuFanRpm"), "RPM", 0, 20000, grouped: true), new MetricDetail("风扇输出", Number(fan, "CpuFanDuty", "%", 0, 100)));
+        UpdateMetric("gpuFan", fan, MetricReading.Numeric(fan?.Number("GpuFanRpm"), "RPM", 0, 20000, grouped: true), new MetricDetail("风扇输出", Number(fan, "GpuFanDuty", "%", 0, 100)));
         var effectiveMode = mode?.Text("OperatingMode") ?? pilot?.CurrentMode;
-        UpdateMetric("mode", mode, DeviceAudit.ModeName(effectiveMode), mode?.Text("OperatingMode") is null && effectiveMode is not null
-            ? "根据已验证的配置识别" : "可在性能模式中更改");
+        UpdateMetric("mode", mode, MetricReading.Mode(effectiveMode), mode?.Text("OperatingMode") is null && effectiveMode is not null
+            ? new MetricDetail("识别方式", "已验证配置") : new MetricDetail("配置来源", effectiveMode switch
+            { "0" or "1" or "2" => "原厂预设", "3" => "原厂已保存", _ => "待确认" }));
         _configuration.Text = mode is null ? "等待厂商配置状态" : $"CPU PL1  {mode.Text("CPU_PL1") ?? "—"}    PL2  {mode.Text("CPU_PL2") ?? "—"}    PL4  {mode.Text("CPU_PL4") ?? "—"}\nGPU TGP  {mode.Text("GPU_ConfigurableTGPTarget") ?? "—"}    DynamicBoost  {mode.Text("GPU_DynamicBoost") ?? "—"}\n{Age(mode)}";
         var warning = DeviceAudit.TgpInconsistency(mode); _rangeWarning.IsOpen = warning is not null; _rangeWarning.Message = warning ?? "";
         RenderPresentation();
