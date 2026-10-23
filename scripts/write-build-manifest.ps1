@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot
 . (Join-Path $PSScriptRoot 'version.ps1')
 $version = Get-OpenRevoVersion
-$filePaths = @('Directory.Build.props','global.json','scripts/build-background.ps1','protocol/device-profiles.json','protocol/registry.json','protocol/processing-chains.json','protocol/mode-pilot.json','protocol/mode-evidence.json','protocol/stability-evidence.json','protocol/configuration-policy.json')
+$filePaths = @('Directory.Build.props','global.json','scripts/build-background.ps1','protocol/device-profiles.json','protocol/registry.json','protocol/processing-chains.json','protocol/mode-pilot.json','protocol/mode-evidence.json','protocol/stability-evidence.json','protocol/configuration-policy.json','protocol/fan-boost.json')
 foreach ($project in @('OpenRevo.App','OpenRevo.Core','OpenRevo.Background')) {
     $directory = Join-Path $root ('src\' + $project)
     $filePaths += @(Get-ChildItem -LiteralPath $directory -File | Where-Object { $_.Extension -in @('.cs','.cpp','.h','.csproj','.xaml','.manifest') -or $_.Name -eq 'packages.lock.json' } |

@@ -322,6 +322,7 @@ public sealed partial class MainWindow : Window
         panel.Children.Add(theme);
         panel.Children.Add(Secondary("主题会自动保存；下次启动会恢复窗口位置、大小及最大化状态。"));
         panel.Children.Add(LifetimeSettings());
+        panel.Children.Add(UpdateSettings());
         var identity = new StackPanel { Spacing = 12 };
         identity.Children.Add(Text("设备与连接", 18, true)); identity.Children.Add(_deviceSummary);
         _identity.IsTextSelectionEnabled = true;
@@ -349,7 +350,7 @@ public sealed partial class MainWindow : Window
         var policy = new StackPanel { Spacing = 12 };
         policy.Children.Add(Text("需保留原厂后台服务。版本不匹配时，请查看设备详情并保存报告；新机型或新版本需要重新验证。"));
         policy.Children.Add(Text("重新检测和保存报告不会自动批准新的机型、版本或配置。报告仅保存本机，不会自动上传。"));
-        policy.Children.Add(Text("已开放状态监测和四种性能模式。风扇曲线、电池充电限制、屏幕色彩和功耗参数暂不支持修改。"));
+        policy.Children.Add(Text("已开放状态监测、四种性能模式和一键强冷／恢复自动调速。风扇曲线、电池充电限制、屏幕色彩和功耗参数暂不支持修改。"));
         policy.Children.Add(Secondary("断开只结束 OpenRevo 的连接，不停止原厂后台采样。关闭后保留 last-session.json，不恢复或重放模式命令。"));
         panel.Children.Add(Details("适用范围与重新验证", policy));
         var diagnostics = new StackPanel { Spacing = 12 };
@@ -372,6 +373,7 @@ public sealed partial class MainWindow : Window
         ToolTipService.SetToolTip(_keepMode, "结束本次恢复记录，继续使用当前模式；不发送切换命令");
         ToolTipService.SetToolTip(_restoreMode, "恢复最近一次切换前的模式和配置");
         _modeCompletion.Children.Add(_keepMode); _modeCompletion.Children.Add(_restoreMode); panel.Children.Add(_modeCompletion);
+        panel.Children.Add(FanControls());
         AutomationProperties.SetLiveSetting(_modeResult, AutomationLiveSetting.Polite);
         AutomationProperties.SetLiveSetting(_modeFeedback, AutomationLiveSetting.Polite);
         var state = new StackPanel { Spacing = 12 };
@@ -494,6 +496,8 @@ public sealed partial class MainWindow : Window
         _connected = false; _samples.Clear(); _received = 0;
         _observer.Pilot.SetJournalWriter(journal => DiagnosticFile.Write(PilotJournalPath,
             JsonSerializer.Serialize(journal, new JsonSerializerOptions { WriteIndented = true, Converters = { new JsonStringEnumConverter() } })));
+        _observer.Pilot.SetFanJournalWriter(journal => DiagnosticFile.Write(FanJournalPath, JsonSerializer.Serialize(journal, new JsonSerializerOptions { WriteIndented = true })));
+        _fanResult.Text = "";
         _installation = null; _inspection = null; _identity.Text = "正在读取本机身份与安装指纹…";
         _capabilityKey = ""; _rawKey = "";
         _error.IsOpen = false; _error.Severity = InfoBarSeverity.Warning; _connection.Text = "正在连接本机服务…"; _connect.Content = "断开";
@@ -587,6 +591,7 @@ public sealed partial class MainWindow : Window
         _customMode.IsEnabled = _connected && pilot?.CanSwitchTo(PilotMode.Custom) == true;
         _restoreMode.IsEnabled = _connected && pilot?.CanRestore == true;
         _keepMode.IsEnabled = _connected && pilot?.CanKeep == true;
+        RenderFanControls();
         if (pilot is not null)
         {
             var journal = pilot.Journal;
@@ -632,11 +637,11 @@ public sealed partial class MainWindow : Window
         var other = new StackPanel { Spacing = 12 };
         foreach (var capability in DeviceAudit.Capabilities(sample, _connected))
         {
-            var implemented = capability.Field is "SystemMonitorSupport" or "FanSettingsSupport" or "TurboModeSupport";
+            var implemented = capability.Field is "SystemMonitorSupport" or "FanSettingsSupport" or "TurboModeSupport" or "FanBoostBtnSupport";
             var current = sample?.Freshness(TimeProvider.System, _connected) == SampleFreshness.Current;
             var availability = !current ? (_connected ? "等待更新" : "上次报告") :
                 !implemented ? "尚未开放" : capability.DeclaredSupported is null ? "待确认" : capability.DeclaredSupported == false ? "未报告支持" :
-                capability.Field == "SystemMonitorSupport" ? "可监测" : "模式已开放";
+                capability.Field == "SystemMonitorSupport" ? "可监测" : capability.Field == "FanBoostBtnSupport" ? "可控制" : "模式已开放";
             var content = new StackPanel { Spacing = 6 };
             content.Children.Add(Text($"{capability.Name} · {availability}", 16, true));
             content.Children.Add(Secondary(FeatureDescription(capability.Field)));
@@ -689,6 +694,7 @@ public sealed partial class MainWindow : Window
                 ageSeconds = Sample(topic)?.Age().TotalSeconds }).ToArray(),
             hardwareWritesImplemented = ModePilotPolicy.Enabled, directHardwareAccessImplemented = false, receivedCount = _received,
             modePilotImplemented = true, modePilot = _observer?.Pilot.Journal,
+            fanBoostImplemented = true, fanControl = _observer?.Pilot.FanJournal,
             requests = _observer?.Requests, samples = _samples.Values.OrderBy(s => s.Topic).ToArray()
         }, new JsonSerializerOptions { WriteIndented = true, Converters = { new JsonStringEnumConverter() } });
     }

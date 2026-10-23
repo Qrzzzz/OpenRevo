@@ -92,6 +92,9 @@ internal static class MqttWire
         return Frame(0x30, [.. String("Fan/Control"), .. Utf8.GetBytes(JsonSerializer.Serialize(new { Action = action }))]);
     }
 
+    internal static byte[] FanBoost(bool enabled) => Frame(0x30,
+        [.. String("Fan/Control"), .. Utf8.GetBytes(JsonSerializer.Serialize(new { Action = FanBoostPolicy.Action(enabled) }))]);
+
     internal static async Task<Packet> ReadAsync(Stream stream, CancellationToken cancellationToken)
     {
         var one = new byte[1];

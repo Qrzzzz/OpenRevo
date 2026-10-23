@@ -62,7 +62,7 @@ public static class ModePilotPolicy
 }
 
 /// <summary>Daily mode switching with a baseline for the latest operation in the same connection.</summary>
-public sealed class ModePilot
+public sealed partial class ModePilot
 {
     private readonly object _gate = new();
     private readonly TimeProvider _clock;
@@ -94,6 +94,8 @@ public sealed class ModePilot
             lock (_gate)
             {
                 if (Busy) return "正在操作，请等待回读。";
+                if (_fanUncertain) return "风扇操作结果未确认，请核对原厂状态后重新连接。";
+                if (FanBoostEnabled == true) return "一键强冷已开启；恢复自动调速后可切换性能模式。";
                 if (_journal.Phase is PilotPhase.Uncertain or PilotPhase.Interrupted)
                     return "本次操作已停止；核对原厂当前模式后手动重新连接，不会重放旧操作。";
                 if (_status is null) return "等待实时模式配置。";
@@ -137,7 +139,7 @@ public sealed class ModePilot
     {
         lock (_gate)
         {
-            if (Busy || _status is null || (restore ? _journal.Phase != PilotPhase.Applied : _journal.Phase is not (PilotPhase.Idle or PilotPhase.Restored or PilotPhase.Kept or PilotPhase.Applied))) return false;
+            if (Busy || _fanUncertain || FanBoostEnabled != false || _status is null || (restore ? _journal.Phase != PilotPhase.Applied : _journal.Phase is not (PilotPhase.Idle or PilotPhase.Restored or PilotPhase.Kept or PilotPhase.Applied))) return false;
             try { Require(_status); return !restore || ModePilotPolicy.SameConfiguration(_status, _journal.Confirmed); }
             catch (InvalidOperationException) { return false; }
         }
@@ -179,6 +181,7 @@ public sealed class ModePilot
         lock (_gate)
         {
             _send = null; _query = null; _authorized = null;
+            _sendFan = null;
             if (_journal.Phase is PilotPhase.Applied or PilotPhase.Sending or PilotPhase.AwaitingReadback or PilotPhase.Restoring)
                 Set(PilotPhase.Interrupted, "连接已结束，不会自动恢复或重放；请用原厂界面核对基线。", persistRequired: false);
         }
@@ -202,6 +205,7 @@ public sealed class ModePilot
             if (_journal.Phase is not (PilotPhase.Sending or PilotPhase.Restoring) || _status is null)
                 throw new InvalidOperationException("操作已中断。");
             Require(_status);
+            if (FanBoostEnabled != false) throw new InvalidOperationException("恢复自动调速后可切换性能模式。");
             RequireTarget(_pendingTarget);
             if (!ModePilotPolicy.SameConfiguration(_status, _expectedBefore)) throw new InvalidOperationException("发送前配置已改变，未发送。");
         }
@@ -219,6 +223,7 @@ public sealed class ModePilot
     }
     private void Require(TopicSample sample)
     {
+        if (_fanUncertain) throw new InvalidOperationException("风扇操作结果未确认，请核对原厂状态后重新连接。");
         if (!Enabled || _send is null || _connection.IsCancellationRequested)
             throw new InvalidOperationException("试点尚未通过本机审计或连接已失效。");
         if (_capabilities is null || _capabilities.Freshness(_clock, true) != SampleFreshness.Current)
@@ -287,6 +292,7 @@ public sealed class ModePilot
                 if (!restore) Set(PilotPhase.Preparing, "正在回读当前配置，尚未发送。");
             }
             var before = await Fresh(token);
+            if (FanBoostEnabled != false) throw new InvalidOperationException("恢复自动调速后可切换性能模式。");
             if (!restore && previous.Phase == PilotPhase.Applied && !ModePilotPolicy.SameConfiguration(before, previous.Confirmed))
                 throw new InvalidOperationException("上次切换后配置已改变，停止继续切换。");
             TopicSample? baseline;

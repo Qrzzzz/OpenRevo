@@ -33,6 +33,10 @@
     {
       "path": "protocol/configuration-policy.json",
       "sha256": "6e117d004f57999a233b64a0484de3d69c4633471c6b72e25743bc9b932e7237"
+    },
+    {
+      "path": "protocol/fan-boost.json",
+      "sha256": "1d199ed0bfef83f7900e4a26001d8653a4a77926c308d918050f9bed3ede5dcf"
     }
   ],
   "scope": "audited local machine only; handler metadata is not recovered handler logic",
@@ -209,6 +213,28 @@
       "restoreScope": "original mode and reported audited configuration fields only",
       "gate": "same audited profile and exact configuration, current capabilities, AC, saved baseline, same connection, explicit action",
       "businessAck": "two consistent fresh readbacks; not a server operation ACK; no CAS"
+    }
+  ],
+  "fanControlRequests": [
+    {
+      "id": "FanBoostOn",
+      "topic": "Fan/Control",
+      "action": "FAN_BOOST_ON",
+      "enabled": true,
+      "qos": 0,
+      "retain": false,
+      "acOnly": true,
+      "evidence": "protocol/fan-boost.json"
+    },
+    {
+      "id": "FanBoostOff",
+      "topic": "Fan/Control",
+      "action": "FAN_BOOST_OFF",
+      "enabled": true,
+      "qos": 0,
+      "retain": false,
+      "acOnly": true,
+      "evidence": "protocol/fan-boost.json"
     }
   ],
   "modePilotPolicy": "protocol/mode-pilot.json",

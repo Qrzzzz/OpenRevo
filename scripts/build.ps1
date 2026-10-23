@@ -23,7 +23,7 @@ if ($Publish) {
     foreach ($name in @("v$version-audit.md",'processing-chains.md','reaudit.md','ui-guidelines.md','v1.0-acceptance.md')) {
         Copy-Item -LiteralPath (Join-Path $root "docs\$name") -Destination $docs
     }
-    foreach ($name in @('live-evidence.json','registry.json','device-profiles.json','processing-chains.json','mode-pilot.json','mode-evidence.json','stability-evidence.json','configuration-policy.json')) {
+    foreach ($name in @('live-evidence.json','registry.json','device-profiles.json','processing-chains.json','mode-pilot.json','mode-evidence.json','stability-evidence.json','configuration-policy.json','fan-boost.json')) {
         Copy-Item -LiteralPath (Join-Path $root "protocol\$name") -Destination $protocol
     }
     & (Join-Path $PSScriptRoot 'write-build-manifest.ps1') -OutputDirectory $output -Sdk $sdk

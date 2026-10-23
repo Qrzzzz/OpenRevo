@@ -134,6 +134,16 @@ public sealed class BridgeObserver
                             while (_trace.Count > 256) _trace.TryDequeue(out _);
                         }, async ct => { await Query(ReadRequest.Capabilities, ct); await Query(ReadRequest.FanStatus, ct); },
                             () => Phase == MonitorPhase.Monitoring && lease.Demand(), token);
+                        Pilot.BindFan(async (enabled, ct) =>
+                        {
+                            await Send(MqttWire.FanBoost(enabled), ct, () =>
+                            {
+                                if (!lease.Demand() || Phase != MonitorPhase.Monitoring) throw new InvalidOperationException("监控授权已失效。");
+                                Pilot.CheckFanSending();
+                            });
+                            _trace.Enqueue(new(DateTimeOffset.UtcNow, "Fan/Control", FanBoostPolicy.Action(enabled)));
+                            while (_trace.Count > 256) _trace.TryDequeue(out _);
+                        });
                         onState("已连接 · 等待实时能力确认");
                         await Query(ReadRequest.Capabilities);
                         await Query(ReadRequest.FanStatus);

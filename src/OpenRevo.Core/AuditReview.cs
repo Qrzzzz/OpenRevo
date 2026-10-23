@@ -58,7 +58,9 @@ public static class AuditReview
         var mode = sample.Text("OperatingMode");
         var candidates = configurations.Where(p => mode is null || p.Name == mode).ToArray();
         if (candidates.Length == 0) return new(null, [new("live state", "OperatingMode", "0 / 1 / 2 / 3", mode ?? "missing")]);
-        var reviews = candidates.Select(p => new ConfigurationReview(p.Name, ConfigurationDifferences(p.Value, sample.Payload))).ToArray();
+        // Fan boost is an independently verified control state. Exact baseline equality stays strict.
+        var reviews = candidates.Select(p => new ConfigurationReview(p.Name, ConfigurationDifferences(p.Value, sample.Payload)
+            .Where(d => d.Field != "FanBoostEnable" || sample.Text("FanBoostEnable") is not ("0" or "1")).ToArray())).ToArray();
         var matches = reviews.Where(r => r.Differences.Count == 0).ToArray();
         if (matches.Length == 1) return matches[0];
         if (matches.Length > 1) return new(null, [new("live state", "OperatingMode", "unique audited configuration", "ambiguous")]);

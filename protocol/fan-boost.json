@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "profileId": "mechrevo-yaoshi-x6ar55xy-n118mro24",
+  "verified": true,
+  "acOnly": true,
+  "topic": "Fan/Control",
+  "actions": {
+    "on": "FAN_BOOST_ON",
+    "off": "FAN_BOOST_OFF"
+  },
+  "source": "Original ControlCenter3 5.56.51.49; custom mode > SPC settings > fan control > one-click cooling",
+  "readback": "Two fresh Fan/Status responses at least 500 ms apart with expected FanBoostEnable; all other configuration fields and mode unchanged",
+  "scope": "Vendor boost on/off only; no curve, manual duty, power or direct EC writes",
+  "lifecycle": "No automatic restore or replay. Vendor service manages fans after UI closes. Return to automatic fan control before a performance mode change.",
+  "evidence": [
+    {
+      "kind": "vendor-ui",
+      "file": ".local/evidence/v110-vendor-fan-roundtrip.json",
+      "sha256": "7e1a515f6c188fa2d8b5c08e6ff6d46aadc3e6abe1403212030330ae29c150fc",
+      "actions": [
+        "FAN_BOOST_ON",
+        "FAN_BOOST_OFF"
+      ],
+      "boostedModes": [
+        "3"
+      ],
+      "configurationRestoredExactly": true,
+      "fanSamples": 27,
+      "maxObservedRpm": {
+        "CpuFanRpm": 5133,
+        "GpuFanRpm": 5205
+      },
+      "lastObservedFan": {
+        "CpuFanDuty": 50,
+        "GpuFanDuty": 50,
+        "CpuFanRpm": 2921,
+        "GpuFanRpm": 2901
+      }
+    },
+    {
+      "kind": "independent",
+      "file": ".local/evidence/v110-fan-independent.json",
+      "sha256": "7990619248455c08bb3f04229eb67db51be279e2af796d7dd4d42b08a0d3bc81",
+      "actions": [
+        "FAN_BOOST_ON",
+        "FAN_BOOST_OFF"
+      ],
+      "boostedModes": [
+        "2"
+      ],
+      "configurationRestoredExactly": true,
+      "fanSamples": 11,
+      "maxObservedRpm": {
+        "CpuFanRpm": 5133,
+        "GpuFanRpm": 5295
+      },
+      "lastObservedFan": {
+        "CpuFanDuty": 45,
+        "GpuFanDuty": 45,
+        "CpuFanRpm": 2655,
+        "GpuFanRpm": 2735
+      }
+    },
+    {
+      "kind": "independent-all",
+      "file": ".local/evidence/v110-fan-other-modes.json",
+      "sha256": "9a999582f59291ae24f698e9a9e0bcdbeba2f699592b96960b1dc09e884e278d",
+      "actions": [
+        "FAN_BOOST_ON",
+        "FAN_BOOST_OFF",
+        "FAN_BOOST_ON",
+        "FAN_BOOST_OFF",
+        "FAN_BOOST_ON",
+        "FAN_BOOST_OFF"
+      ],
+      "boostedModes": [
+        "0",
+        "1",
+        "3"
+      ],
+      "configurationRestoredExactly": true,
+      "fanSamples": 28,
+      "maxObservedRpm": {
+        "CpuFanRpm": 5158,
+        "GpuFanRpm": 5205
+      },
+      "lastObservedFan": {
+        "CpuFanDuty": 45,
+        "GpuFanDuty": 45,
+        "CpuFanRpm": 2702,
+        "GpuFanRpm": 2735
+      }
+    }
+  ]
+}

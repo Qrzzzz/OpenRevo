@@ -34,6 +34,15 @@ public static class ProtocolEvidence
                 || row.GetProperty("enabled").GetBoolean() != ModePilotPolicy.Allows(mode) || row.GetProperty("qos").GetInt32() != 0
                 || row.GetProperty("retain").GetBoolean() || !row.GetProperty("acOnly").GetBoolean()) throw new InvalidDataException("Pilot contract drift.");
         }
+        var fanControls = root.GetProperty("fanControlRequests").EnumerateArray().ToArray();
+        if (fanControls.Length != 2) throw new InvalidDataException("Unexpected fan action count.");
+        foreach (var enabledFan in new[] { true, false })
+        {
+            var row = fanControls.Single(r => r.GetProperty("action").GetString() == FanBoostPolicy.Action(enabledFan));
+            if (row.GetProperty("topic").GetString() != "Fan/Control" || row.GetProperty("enabled").GetBoolean() != FanBoostPolicy.Enabled
+                || row.GetProperty("qos").GetInt32() != 0 || row.GetProperty("retain").GetBoolean() || !row.GetProperty("acOnly").GetBoolean())
+                throw new InvalidDataException("Fan control contract drift.");
+        }
         return root.Clone();
     }
 }

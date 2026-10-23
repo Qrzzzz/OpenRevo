@@ -132,7 +132,7 @@ public sealed partial class MainWindow
         }
         foreach (var (button, choice) in new[] { (_officeMode, PilotMode.Office), (_balancedMode, PilotMode.Balanced), (_turboMode, PilotMode.Turbo), (_customMode, PilotMode.Custom) })
             AutomationProperties.SetName(button, (pilot?.CurrentMode == ((int)choice).ToString() ? "当前模式：" : "切换到") + DeviceAudit.ModeName(((int)choice).ToString()));
-        var busy = pilot?.Busy == true;
+        var busy = pilot?.Busy == true && !pilot.FanBusy;
         _modeProgress.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
         _modeCompletion.Visibility = journal?.Baseline is not null && journal.Phase is
             PilotPhase.Applied or PilotPhase.Sending or PilotPhase.AwaitingReadback or PilotPhase.Restoring or PilotPhase.Uncertain or PilotPhase.Interrupted
@@ -204,6 +204,7 @@ public sealed partial class MainWindow
         "SystemMonitorSupport" => "查看处理器、显卡、风扇和电池状态。",
         "FanSettingsSupport" => "切换四种性能模式；自定义使用原厂已保存的配置。风扇曲线暂不支持编辑。",
         "TurboModeSupport" => "在性能模式中选择狂暴模式，需接通电源且当前配置已验证。",
+        "FanBoostBtnSupport" => "在性能模式页开启一键强冷，或恢复原厂自动调速，查看两路风扇转速。",
         "ColorCalibrationSupport" => "暂不支持修改显示色彩。", "DGpuDirectConnectionSupport" => "暂不支持切换显卡连接方式。",
         "OcSettingsSupport" => "暂不支持修改功耗或超频参数。", "RGBLightbarSupport" => "暂不支持修改灯带效果。",
         "LiquidCoolingSupport" => "暂不支持液冷控制。", "TypeCSupport" => "暂不支持修改 Type-C 供电策略。",

@@ -489,6 +489,7 @@ TopicSample PilotStatus(int mode, bool ac = true, bool changed = false)
 {
     var values = ModePilotPolicy.ConfigurationFields.ToDictionary(f => f, f => (object)$"m{mode}-{f}");
     values["OperatingMode"] = mode.ToString(); values["IsAC"] = ac;
+    values["FanBoostEnable"] = "0";
     if (changed) values["CPU_PL1"] = "external-change";
     return Sample("Fan/Status", JsonSerializer.Serialize(values));
 }
@@ -932,6 +933,170 @@ AsyncTest("simulated service restart leaves applied control interrupted and reco
     cancel.Cancel(); await RejectAsync<OperationCanceledException>(() => reconnected); await server;
 });
 
+Test("fan boost has exactly two typed non-retained commands", () =>
+{
+    foreach (var enabled in new[] { true, false })
+    {
+        var packet = MqttWire.FanBoost(enabled);
+        Check(packet[0] == 0x30 && Encoding.UTF8.GetString(packet).Contains(enabled ? "FAN_BOOST_ON" : "FAN_BOOST_OFF"));
+    }
+    Check(ProtocolEvidence.Registry.GetProperty("fanControlRequests").GetArrayLength() == 2 && FanBoostPolicy.Enabled);
+});
+Test("audited fan boost state can vary while exact baseline and other settings stay strict", () =>
+{
+    var baseline = ModePilotPolicy.Evidence.GetProperty("observedConfigurations").GetProperty("2").GetRawText();
+    var changed = System.Text.Json.Nodes.JsonNode.Parse(baseline)!;
+    changed["FanBoostEnable"] = "1";
+    var enabled = Sample("Fan/Status", changed.ToJsonString());
+    Check(AuditReview.Configuration(enabled).Differences.Count == 0);
+    Check(!ModePilotPolicy.SameConfiguration(Sample("Fan/Status", baseline), enabled));
+    changed["CPU_PL1"] = "999";
+    Check(AuditReview.Configuration(Sample("Fan/Status", changed.ToJsonString())).Differences.Any(d => d.Field == "CPU_PL1"));
+    changed = System.Text.Json.Nodes.JsonNode.Parse(baseline)!; changed["FanBoostEnable"] = "unknown";
+    Check(AuditReview.Configuration(Sample("Fan/Status", changed.ToJsonString())).Differences.Any(d => d.Field == "FanBoostEnable"));
+});
+async Task FanCase(string scenario)
+{
+    var boosted = false; var writes = new List<bool>(); var records = new List<FanBoostJournal>();
+    var cap = supportJson[..^1] + $",\"FanSettingsSupport\":1,\"FanBoostBtnSupport\":{(scenario == "unsupported" ? 0 : 1)}}}";
+    using var connection = new CancellationTokenSource();
+    var pilot = new ModePilot(TimeProvider.System, false, scenario is "timeout" ? TimeSpan.FromMilliseconds(250) : null);
+    pilot.SetJournalWriter(_ => { });
+    pilot.SetFanJournalWriter(j => { if (scenario == "disk" && j.Phase == "Sending") throw new IOException("test full disk"); records.Add(j); });
+    TopicSample Status()
+    {
+        var node = System.Text.Json.Nodes.JsonNode.Parse(ModePilotPolicy.Evidence.GetProperty("observedConfigurations").GetProperty("2").GetRawText())!;
+        node["FanBoostEnable"] = boosted ? "1" : "0";
+        node["IsAC"] = scenario != "dc";
+        return Sample("Fan/Status", node.ToJsonString(), scenario == "retained");
+    }
+    Task Query(CancellationToken token)
+    {
+        pilot.Observe(Sample("Customize/SupportInfo", cap, scenario == "retained")); pilot.Observe(Status()); return Task.CompletedTask;
+    }
+    pilot.Bind((mode, token) => throw new Exception("Fan operation sent a mode command"), Query, () => true, connection.Token);
+    pilot.BindFan((enabled, token) =>
+    {
+        pilot.CheckFanSending();
+        Check(records.Last().Phase == "Sending" && records.Last().Baseline is not null);
+        writes.Add(enabled);
+        if (scenario != "timeout") boosted = enabled;
+        if (scenario == "disconnect") { connection.Cancel(); pilot.End(); }
+        if (scenario == "power-loss") pilot.UpdatePowerSource(false);
+        return Task.CompletedTask;
+    });
+    await Query(default);
+    var operation = pilot.SetFanBoostAsync(true);
+    if (scenario == "concurrent")
+    {
+        Check(!(await pilot.SetFanBoostAsync(false)).Succeeded);
+        Check(!(await pilot.SwitchAsync(PilotMode.Office)).Succeeded);
+    }
+    var result = await operation;
+    if (scenario is "success" or "concurrent")
+    {
+        Check(result.Succeeded && boosted && pilot.FanBoostEnabled == true && pilot.CanControlFan && !pilot.CanSwitch);
+        Check(!(await pilot.SwitchAsync(PilotMode.Office)).Succeeded);
+        Check((await pilot.SetFanBoostAsync(true)).Succeeded && writes.Count == 1, "Idempotent request must not write");
+        Check((await pilot.SetFanBoostAsync(false)).Succeeded && !boosted && pilot.CanSwitch);
+        Check(writes.SequenceEqual(new[] { true, false }) && ModePilotPolicy.SameConfiguration(records[0].Baseline, pilot.CurrentStatus));
+        Check((await pilot.SetFanBoostAsync(false)).Succeeded && writes.Count == 2);
+    }
+    else
+    {
+        Check(!result.Succeeded);
+        Check(writes.Count == (scenario is "timeout" or "disconnect" or "power-loss" ? 1 : 0));
+        if (writes.Count != 0)
+        {
+            Check(!pilot.CanControlFan && !pilot.CanSwitch && pilot.FanJournal.Phase == "Uncertain");
+            Check(!(await pilot.SetFanBoostAsync(false)).Succeeded && writes.Count == 1);
+            Check(!pilot.CanControlFan && !pilot.CanSwitch && pilot.FanJournal.Phase == "Uncertain");
+        }
+    }
+}
+foreach (var scenario in new[] { "success", "concurrent", "unsupported", "dc", "retained", "timeout", "disconnect", "power-loss", "disk" })
+    AsyncTest("fan control " + scenario + " preserves explicit writes and restoration", () => FanCase(scenario));
+
+string ReleaseJson(string version, bool prerelease = false, string? url = null) => JsonSerializer.Serialize(new
+{
+    tag_name = "v" + version, draft = false, prerelease,
+    html_url = url ?? $"https://github.com/Qrzzzz/OpenRevo/releases/tag/v{version}", body = "更新说明",
+    assets = new[] { new { name = $"OpenRevo-{version}-win-x64.zip", browser_download_url = $"https://github.com/Qrzzzz/OpenRevo/releases/download/v{version}/OpenRevo-{version}-win-x64.zip" } }
+});
+AsyncTest("GitHub check uses public fixed endpoint and compares numeric versions", async () =>
+{
+    using var client = new HttpClient(new UpdateHttpHandler((request, token) =>
+    {
+        Check(request.RequestUri == GitHubUpdates.LatestEndpoint && request.Method == HttpMethod.Get);
+        Check(request.Headers.Authorization is null && request.Headers.UserAgent.ToString() == "OpenRevo/1.1.0");
+        Check(request.Headers.Contains("X-GitHub-Api-Version"));
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(ReleaseJson("1.10.0")) });
+    }));
+    var result = await new GitHubUpdates(client).CheckAsync("1.1.0");
+    Check(result.Status == UpdateStatus.Available && result.Version == "1.10.0" && result.DownloadUrl is not null && result.Notes == "更新说明");
+});
+AsyncTest("GitHub check distinguishes current version and unpublished newer local version", async () =>
+{
+    using var client = new HttpClient(new UpdateHttpHandler((request, token) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(ReleaseJson("1.1.0")) })));
+    Check((await new GitHubUpdates(client).CheckAsync("1.1.0")).Status == UpdateStatus.Current);
+    Check((await new GitHubUpdates(client).CheckAsync("1.2.0")).Status == UpdateStatus.Ahead);
+});
+AsyncTest("GitHub prerelease and foreign release links are rejected", async () =>
+{
+    foreach (var json in new[] { ReleaseJson("1.2.0", true), ReleaseJson("1.2.0", url: "https://example.com/update.exe"), ReleaseJson("1.2.0-beta") })
+    {
+        using var client = new HttpClient(new UpdateHttpHandler((request, token) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(json) })));
+        await RejectAsync<InvalidDataException>(() => new GitHubUpdates(client).CheckAsync("1.1.0"));
+    }
+});
+AsyncTest("GitHub check reports rate limits and unavailable releases", async () =>
+{
+    foreach (var code in new[] { HttpStatusCode.NotFound, HttpStatusCode.BadGateway })
+    {
+        using var client = new HttpClient(new UpdateHttpHandler((request, token) => Task.FromResult(new HttpResponseMessage(code))));
+        try { await new GitHubUpdates(client).CheckAsync("1.1.0"); throw new Exception("HTTP failure accepted"); }
+        catch (HttpRequestException ex) { Check(ex.StatusCode == code); }
+    }
+});
+AsyncTest("GitHub rate limits fall back once to the official latest release URL", async () =>
+{
+    foreach (var code in new[] { HttpStatusCode.Forbidden, HttpStatusCode.TooManyRequests })
+    {
+        var calls = 0;
+        using var client = new HttpClient(new UpdateHttpHandler((request, token) =>
+        {
+            calls++;
+            if (request.RequestUri == GitHubUpdates.LatestEndpoint) return Task.FromResult(new HttpResponseMessage(code));
+            Check(request.RequestUri == GitHubUpdates.LatestReleaseUrl && request.Headers.Authorization is null && calls == 2);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { RequestMessage = new HttpRequestMessage(HttpMethod.Get, "https://github.com/Qrzzzz/OpenRevo/releases/tag/v1.2.0") });
+        }));
+        var result = await new GitHubUpdates(client).CheckAsync("1.1.0");
+        Check(result.Status == UpdateStatus.Available && result.Version == "1.2.0" && result.DownloadUrl is null && calls == 2);
+    }
+});
+AsyncTest("GitHub latest page fallback rejects foreign redirects without retrying", async () =>
+{
+    var calls = 0;
+    using var client = new HttpClient(new UpdateHttpHandler((request, token) => Task.FromResult(++calls == 1
+        ? new HttpResponseMessage(HttpStatusCode.Forbidden)
+        : new HttpResponseMessage(HttpStatusCode.OK) { RequestMessage = new HttpRequestMessage(HttpMethod.Get, "https://example.com/releases/tag/v1.2.0") })));
+    await RejectAsync<InvalidDataException>(() => new GitHubUpdates(client).CheckAsync("1.1.0"));
+    Check(calls == 2);
+});
+AsyncTest("GitHub malformed and oversized responses fail without an update result", async () =>
+{
+    using var malformed = new HttpClient(new UpdateHttpHandler((request, token) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{") })));
+    await RejectAsync<JsonException>(() => new GitHubUpdates(malformed).CheckAsync("1.1.0"));
+    using var oversized = new HttpClient(new UpdateHttpHandler((request, token) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(new string('x', 1024 * 1024 + 1)) })));
+    await RejectAsync<InvalidDataException>(() => new GitHubUpdates(oversized).CheckAsync("1.1.0"));
+});
+AsyncTest("GitHub check cancellation stops the outstanding request", async () =>
+{
+    using var client = new HttpClient(new UpdateHttpHandler(async (request, token) => { await Task.Delay(Timeout.Infinite, token); return new HttpResponseMessage(); }));
+    using var stop = new CancellationTokenSource(40);
+    await RejectAsync<OperationCanceledException>(() => new GitHubUpdates(client).CheckAsync("1.1.0", stop.Token));
+});
+
 var failures = new List<string>();
 foreach (var test in cases)
 {
@@ -945,6 +1110,11 @@ sealed class FragmentedStream(byte[] bytes) : MemoryStream(bytes)
 {
     public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         => base.ReadAsync(buffer[..Math.Min(1, buffer.Length)], cancellationToken);
+}
+
+sealed class UpdateHttpHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> send) : HttpMessageHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token) => send(request, token);
 }
 
 sealed class TestClock : TimeProvider

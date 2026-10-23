@@ -11,5 +11,6 @@
     <EmbeddedResource Include="..\..\protocol\mode-pilot.json" LogicalName="OpenRevo.mode-pilot.json" />
     <EmbeddedResource Include="..\..\protocol\configuration-policy.json" LogicalName="OpenRevo.configuration-policy.json" />
     <EmbeddedResource Include="..\..\protocol\mode-evidence.json" LogicalName="OpenRevo.mode-evidence.json" />
+    <EmbeddedResource Include="..\..\protocol\fan-boost.json" LogicalName="OpenRevo.fan-boost.json" />
   </ItemGroup>
 </Project>
