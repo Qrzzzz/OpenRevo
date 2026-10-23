@@ -54,9 +54,9 @@ public sealed partial class MainWindow
         string? startup = null;
         try { startup = StartupRegistration.Read(); }
         catch (Exception ex) when (LifetimeFailure(ex)) { _startupHint.Text = "无法读取开机启动设置，请检查当前用户权限。"; }
-        var autoStart = new ToggleSwitch { Header = "开机自启动（推荐开启）", OnContent = "开启", OffContent = "关闭", IsOn = startup is not null };
+        var autoStart = new ToggleSwitch { Header = "开机自启动", OnContent = "开启", OffContent = "关闭", IsOn = startup is not null };
         panel.Children.Add(autoStart);
-        panel.Children.Add(Secondary("默认关闭。开启后，登录 Windows 时只显示托盘图标，点击即可打开；不弹出主窗口。"));
+        panel.Children.Add(Secondary("默认关闭。经常使用时可按需开启：登录 Windows 后仅驻留托盘，不弹出主窗口。关闭自启动不影响原厂后台维持当前硬件模式。"));
         if (startup is not null && !StartupRegistration.Matches(startup, DesktopLifetime.BackgroundPath))
             _startupHint.Text = "开机启动仍指向其他文件夹。关闭再开启此开关，可改用当前版本。";
         panel.Children.Add(_startupHint);

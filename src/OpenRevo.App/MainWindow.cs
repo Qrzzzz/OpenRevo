@@ -99,7 +99,7 @@ public sealed partial class MainWindow : Window
         var brand = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, VerticalAlignment = VerticalAlignment.Center };
         brand.Children.Add(new FontIcon { Glyph = "\uE9D9", FontSize = 17 });
         brand.Children.Add(Text("OpenRevo", 14, true));
-        brand.Children.Add(Text($"预览版 {AppVersion.Current}", 12));
+        brand.Children.Add(Text(AppVersion.Current, 12));
         titleBar.Children.Add(brand);
         _root.Children.Add(titleBar);
         ExtendsContentIntoTitleBar = true;
