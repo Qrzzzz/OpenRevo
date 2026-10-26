@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Windowing;
@@ -63,8 +63,7 @@ public sealed partial class MainWindow
         try { startup = StartupRegistration.Read(); }
         catch (Exception ex) when (LifetimeFailure(ex)) { _startupHint.Text = "无法读取开机启动设置，请检查当前用户权限。"; }
         var autoStart = new ToggleSwitch { Header = "开机自启动", OnContent = "开启", OffContent = "关闭", IsOn = startup is not null };
-        panel.Children.Add(autoStart);
-        panel.Children.Add(Secondary("默认关闭。经常使用时可按需开启：登录 Windows 后仅驻留托盘，不弹出主窗口。关闭自启动不影响原厂后台维持当前硬件模式。"));
+        panel.Children.Add(SettingRow("开机自启动", "登录 Windows 后驻留托盘；默认关闭。", autoStart));
         if (startup is not null && !StartupRegistration.Matches(startup, DesktopLifetime.BackgroundPath))
             _startupHint.Text = "开机启动仍指向其他文件夹。关闭再开启此开关，可改用当前版本。";
         panel.Children.Add(_startupHint);
@@ -97,8 +96,8 @@ public sealed partial class MainWindow
             catch (Exception ex) when (LifetimeFailure(ex))
             { stay.IsOn = false; ShowNotice("后台未能开启", ex.Message, InfoBarSeverity.Warning); }
         };
-        panel.Children.Add(stay);
-        panel.Children.Add(Secondary("关闭后释放界面与监控连接，只保留轻量托盘。当前硬件模式继续有效；再次打开会重新读取设备，不自动切换模式。"));
+        panel.Children.Add(SettingRow("关闭窗口后驻留托盘", "关窗结束监控，硬件设置继续由原厂服务维持。", stay));
+        panel.Children.Add(Details("了解启动与后台", Secondary("自启动不弹出主窗口。关窗后只保留轻量托盘，不采样或轮询；再次打开会重新读取设备。关闭自启动不影响当前硬件模式。若在 Windows 启动应用中禁用，需在那里重新启用。")));
         var exit = new Button { Content = "退出 OpenRevo" };
         exit.Click += (_, _) => RequestExit();
         panel.Children.Add(exit);

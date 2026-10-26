@@ -1,4 +1,4 @@
-using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
@@ -78,7 +78,7 @@ public sealed partial class MainWindow
         _checkUpdates = CheckUpdates;
         check.Click += (_, _) => CheckUpdates();
         panel.Children.Add(actions); panel.Children.Add(status); panel.Children.Add(download); panel.Children.Add(notes);
-        panel.Children.Add(Secondary("下载由浏览器完成。更新时先完全退出 OpenRevo，再将新版解压到独立文件夹运行；设置会保留。"));
+        panel.Children.Add(Details("更新与回退说明", Secondary("下载由浏览器完成。更新时先完全退出 OpenRevo，再将新版解压到独立文件夹运行；设置会保留。")));
         _updateCard = Card(panel);
         _updateCard.Loaded += (_, _) => { if (_revealUpdateCard) RevealUpdateCard(); };
         return _updateCard;

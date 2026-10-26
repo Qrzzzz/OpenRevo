@@ -26,7 +26,7 @@ public sealed partial class MainWindow : Window
 {
     private readonly Grid _root = new();
     private readonly NavigationView _navigation = new();
-    private readonly Grid _metrics = new() { ColumnSpacing = 20, RowSpacing = 20 };
+    private readonly Grid _metrics = new() { ColumnSpacing = 16, RowSpacing = 16 };
     private readonly List<Border> _metricCards = [];
     private readonly Dictionary<string, MetricCardView> _metricViews = [];
     private readonly Dictionary<string, TopicSample> _samples = new(StringComparer.Ordinal);
@@ -51,7 +51,7 @@ public sealed partial class MainWindow : Window
     private readonly Button _turboMode = new() { MinWidth = 0 };
     private readonly Button _customMode = new() { MinWidth = 0 };
     private readonly Button _restoreMode = new() { Content = "撤销上次切换" };
-    private readonly Button _keepMode = new() { Content = "保留此模式" };
+    private readonly Button _keepMode = new() { Content = "结束撤销记录" };
     private readonly TextBlock _modeResult = Text("", 14);
     private readonly TextBlock _pilotState = Text("等待本机实时状态", 14);
     private readonly TextBlock _pilotBaseline = Text("尚未记录切换基线", 13);
@@ -95,7 +95,7 @@ public sealed partial class MainWindow : Window
         _root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         _root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         _root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        var titleBar = new Grid { Height = 44, Padding = new Thickness(16, 0, 140, 0) };
+        var titleBar = new Grid { Height = 40, Padding = new Thickness(16, 0, 140, 0) };
         var brand = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, VerticalAlignment = VerticalAlignment.Center };
         var brandIcon = new Image { Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri("ms-appx:///Assets/OpenRevo.png")), Width = 24, Height = 24 };
         AutomationProperties.SetAccessibilityView(brandIcon, AccessibilityView.Raw);
@@ -116,11 +116,12 @@ public sealed partial class MainWindow : Window
         _navigation.OpenPaneLength = 204;
         _navigation.PaneToggleButtonStyle = (Style)Application.Current.Resources["LucidePaneToggleStyle"];
         _notice.CloseButtonStyle = (Style)Application.Current.Resources["LucideCloseStyle"];
+        _modeFeedback.CloseButtonStyle = (Style)Application.Current.Resources["LucideCloseStyle"];
         _navigation.PaneDisplayMode = NavigationViewPaneDisplayMode.Auto;
         _navigation.CompactModeThresholdWidth = 800;
         _navigation.ExpandedModeThresholdWidth = 1050;
         _navigation.MenuItems.Add(Nav("设备概览", "overview", "layout-dashboard"));
-        _navigation.MenuItems.Add(Nav("性能模式", "pilot", "gauge"));
+        _navigation.MenuItems.Add(Nav("性能与散热", "pilot", "gauge"));
         _navigation.MenuItems.Add(Nav("功能支持", "capabilities", "list-checks"));
         _navigation.FooterMenuItems.Add(Nav("原始数据", "raw", "file-json"));
         _navigation.FooterMenuItems.Add(Nav("设置与诊断", "settings", "settings"));
@@ -159,10 +160,10 @@ public sealed partial class MainWindow : Window
             _modeResult.Text = "";
             StartSession();
         };
-        _officeMode.Click += async (_, _) => await OperateModeAsync(PilotMode.Office, false);
-        _balancedMode.Click += async (_, _) => await OperateModeAsync(PilotMode.Balanced, false);
-        _turboMode.Click += async (_, _) => await OperateModeAsync(PilotMode.Turbo, false);
-        _customMode.Click += async (_, _) => await OperateModeAsync(PilotMode.Custom, false);
+        _officeMode.Click += async (_, _) => await SelectModeAsync(PilotMode.Office);
+        _balancedMode.Click += async (_, _) => await SelectModeAsync(PilotMode.Balanced);
+        _turboMode.Click += async (_, _) => await SelectModeAsync(PilotMode.Turbo);
+        _customMode.Click += async (_, _) => await SelectModeAsync(PilotMode.Custom);
         _restoreMode.Click += async (_, _) => await OperateModeAsync(default, true);
         _keepMode.Click += (_, _) =>
         {
@@ -223,54 +224,57 @@ public sealed partial class MainWindow : Window
 
     private static Border Card(UIElement child) => new()
     {
-        Child = child, Padding = new Thickness(20), CornerRadius = new CornerRadius(8), BorderThickness = new Thickness(1),
+        Child = child, Padding = new Thickness(UiStyle.CardPadding), CornerRadius = new CornerRadius(UiStyle.CardRadius), BorderThickness = new Thickness(1),
         Style = (Style)Application.Current.Resources["SurfaceCardStyle"]
     };
 
     private static StackPanel Section(string title, string subtitle)
     {
-        var panel = new StackPanel { Spacing = 20, Margin = new Thickness(24, 20, 24, 28), HorizontalAlignment = HorizontalAlignment.Stretch };
+        var panel = new StackPanel { Spacing = UiStyle.SectionSpacing, Margin = new Thickness(24, 12, 24, 24), HorizontalAlignment = HorizontalAlignment.Stretch };
         var heading = new StackPanel { Spacing = 6 };
-        var titleText = Text(title, 28, true); AutomationProperties.SetHeadingLevel(titleText, AutomationHeadingLevel.Level1);
+        var titleText = Text(title, UiStyle.PageTitle, true); AutomationProperties.SetHeadingLevel(titleText, AutomationHeadingLevel.Level1);
         heading.Children.Add(titleText); heading.Children.Add(Secondary(subtitle)); panel.Children.Add(heading);
         return panel;
     }
 
     private UIElement OverviewPage()
     {
-        var panel = Section("设备概览", "查看温度、风扇、电量和当前性能模式。");
+        var panel = new StackPanel { Spacing = UiStyle.SectionSpacing, Margin = new Thickness(24, 12, 24, 24) };
+        var heading = new Grid { ColumnSpacing = 16 };
+        heading.ColumnDefinitions.Add(new ColumnDefinition());
+        heading.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var title = Text("设备概览", UiStyle.PageTitle, true);
+        AutomationProperties.SetHeadingLevel(title, AutomationHeadingLevel.Level1); heading.Children.Add(title);
+        var appearance = GlowToolbar(); Grid.SetColumn(appearance, 1); heading.Children.Add(appearance);
+        panel.Children.Add(heading);
         AddMetric("cpu", "处理器温度", "cpu");
         AddMetric("gpu", "显卡温度", "monitor");
         AddMetric("battery", "电池电量", "battery-charging");
         AddMetric("cpuFan", "CPU 风扇", "fan");
         AddMetric("gpuFan", "GPU 风扇", "fan");
         AddMetric("mode", "性能模式", "gauge");
-        panel.Children.Add(GlowToolbar());
         _metricStage.Children.Add(_metricGlowHost); _metricStage.Children.Add(_metrics);
         _metricGlowHost.Loaded += (_, _) => InitializeMetricGlows();
         panel.Children.Add(_metricStage);
-        panel.Children.Add(_sensorNotice);
         var config = new StackPanel { Spacing = 10 };
         config.Children.Add(Secondary("以下是模式设定值，并非当前实际功耗。"));
         config.Children.Add(_configuration);
         config.Children.Add(_rangeWarning);
-        var modeLink = new HyperlinkButton { Content = "更改性能模式", HorizontalAlignment = HorizontalAlignment.Left, Padding = new Thickness(0) };
-        modeLink.Click += (_, _) => _navigation.SelectedItem = _navigation.MenuItems[1];
-        panel.Children.Add(modeLink);
         panel.Children.Add(Details("查看模式功耗设定", config));
-        panel.Children.Add(Secondary("数据按原厂服务的频率更新，未更新或断开后的数值会单独标记。"));
         return new ScrollViewer { Content = panel, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
     }
 
     private void AddMetric(string key, string label, string glyph)
     {
-        var view = new MetricCardView(label, glyph, key == "mode");
+        var view = new MetricCardView(label, glyph, key == "mode", key is "cpu" or "gpu" or "cpuFan" or "gpuFan");
+        view.NavigateRequested += () => _navigation.SelectedItem = _navigation.MenuItems[1];
         _metricViews[key] = view; _metricCards.Add(view.Surface); _metrics.Children.Add(view.Surface);
     }
 
     private void LayoutMetrics()
     {
-        var count = _metrics.ActualWidth >= 850 ? 3 : _metrics.ActualWidth >= 500 ? 2 : 1;
+        if (!_metrics.IsLoaded || _metrics.ActualWidth <= 0) return;
+        var count = UiPresentation.MetricColumns(_metrics.ActualWidth, _uiSettings.TextScaleFactor);
         if (_metrics.ColumnDefinitions.Count == count) return;
         _metrics.ColumnDefinitions.Clear(); _metrics.RowDefinitions.Clear();
         for (var i = 0; i < count; i++) _metrics.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -323,10 +327,13 @@ public sealed partial class MainWindow : Window
             _preferences = _preferences with { Theme = (AppThemePreference)theme.SelectedIndex };
             ApplyTheme(); SavePreferences();
         };
-        panel.Children.Add(theme);
-        panel.Children.Add(Secondary("主题会自动保存；下次启动会恢复窗口位置、大小及最大化状态。"));
-        panel.Children.Add(LifetimeSettings());
+        var appearance = new StackPanel { Spacing = 8 };
+        appearance.Children.Add(Text("外观", UiStyle.ModuleTitle, true));
+        theme.Header = null;
+        appearance.Children.Add(SettingRow("应用主题", "界面外观和窗口位置会自动保存。", theme));
+        panel.Children.Add(Card(appearance));
         panel.Children.Add(UpdateSettings());
+        panel.Children.Add(LifetimeSettings());
         var identity = new StackPanel { Spacing = 12 };
         identity.Children.Add(Text("设备与连接", 18, true)); identity.Children.Add(_deviceSummary);
         _identity.IsTextSelectionEnabled = true;
@@ -368,18 +375,18 @@ public sealed partial class MainWindow : Window
 
     private UIElement PilotPage()
     {
-        var panel = Section("性能模式", "选择适合当前任务的性能与散热策略，切换需接通电源。");
+        var panel = Section("性能与散热", "选择后立即切换并核对结果，切换模式需接通电源。");
         var current = new StackPanel { Spacing = 8 };
-        current.Children.Add(Secondary("当前模式")); current.Children.Add(_currentModeTitle); current.Children.Add(_currentModeDetail);
+        current.Children.Add(_currentModeLabel); current.Children.Add(_currentModeTitle); current.Children.Add(_currentModeDetail);
         panel.Children.Add(Card(current));
         panel.Children.Add(_modeFeedback);
         AutomationProperties.SetName(_modeProgress, "正在核对模式切换结果");
         panel.Children.Add(_modeProgress);
         ConfigureModeChoices(); panel.Children.Add(_modeChoices);
-        _keepMode.Style = (Style)Application.Current.Resources["AccentButtonStyle"];
-        ToolTipService.SetToolTip(_keepMode, "结束本次恢复记录，继续使用当前模式；不发送切换命令");
+        _keepMode.Style = null;
+        ToolTipService.SetToolTip(_keepMode, "清除最近一次切换的撤销记录；当前模式已生效，不需要此步骤保存");
         ToolTipService.SetToolTip(_restoreMode, "恢复最近一次切换前的模式和配置");
-        _modeCompletion.Children.Add(_keepMode); _modeCompletion.Children.Add(_restoreMode); panel.Children.Add(_modeCompletion);
+        _modeCompletion.Children.Add(_restoreMode); _modeCompletion.Children.Add(_keepMode); panel.Children.Add(_modeCompletion);
         panel.Children.Add(FanControls());
         AutomationProperties.SetLiveSetting(_modeResult, AutomationLiveSetting.Polite);
         AutomationProperties.SetLiveSetting(_modeFeedback, AutomationLiveSetting.Polite);
@@ -388,7 +395,7 @@ public sealed partial class MainWindow : Window
         state.Children.Add(_controlReadiness); state.Children.Add(_previousPilot);
         panel.Children.Add(Details("切换记录与配置详情", state));
         var help = new StackPanel { Spacing = 12 };
-        help.Children.Add(Text("可以连续切换。每次以切换前的配置作为撤销目标，撤销只影响最近一次切换。保留此模式会结束本次恢复记录，不发送硬件命令。"));
+        help.Children.Add(Text("切换核对完成后立即生效，无需保存。每次以切换前的配置作为撤销目标，撤销只影响最近一次切换。“结束撤销记录”仅清除此记录，不发送硬件命令。"));
         help.Children.Add(Text("自定义模式使用原厂已保存的配置，本版不编辑参数。原厂程序仍可能改变配置；结果无法确认时，请在原厂控制中心核对。关闭、断线或重连不会自动恢复模式。"));
         help.Children.Add(Secondary("Tab / Shift+Tab 移动焦点，Enter / 空格操作按钮；Ctrl+R 刷新，Ctrl+S 导出。"));
         panel.Children.Add(Details("了解切换与撤销", help));
@@ -558,14 +565,8 @@ public sealed partial class MainWindow : Window
     }
 
     private TopicSample? Sample(string topic) => _samples.GetValueOrDefault(topic);
-    private string Age(TopicSample? sample)
-    {
-        if (sample is null) return "尚未收到状态";
-        var seconds = Math.Max(0, sample.Age().TotalSeconds);
-        var prefix = sample.Freshness(TimeProvider.System, _connected) switch
-        { SampleFreshness.Cached => "缓存数据", SampleFreshness.Stale => "暂未更新", SampleFreshness.Disconnected => "已断开 · 历史数据", _ => "已更新" };
-        return $"{prefix} · {(seconds < 60 ? $"{seconds:0} 秒前" : $"{seconds / 60:0} 分钟前")}";
-    }
+    private string Age(TopicSample? sample) => UiPresentation.MetricTime(sample?.Freshness(TimeProvider.System, _connected),
+        sample?.Age() ?? TimeSpan.Zero, true);
 
     private void UpdateMetric(string key, TopicSample? sample, MetricReading value, MetricDetail detail) =>
         _metricViews[key].SetContent(value, detail, sample?.Freshness(TimeProvider.System, _connected), sample?.Age() ?? TimeSpan.Zero);
@@ -588,10 +589,6 @@ public sealed partial class MainWindow : Window
         var config = pilot?.ConfigurationReview;
         _controlReadiness.Text = (_connected ? pilot?.ControlStatus : "连接未就绪；请在连接与外观查看身份／版本差异。")
             + (config?.Differences.Count > 0 ? "\n" + FormatDifferences(config.Differences) + "\n关键配置变化时，先核对原厂配置并保存审计材料；不会自动采纳当前值。" : "");
-        _officeMode.IsEnabled = _connected && pilot?.CanSwitchTo(PilotMode.Office) == true;
-        _balancedMode.IsEnabled = _connected && pilot?.CanSwitchTo(PilotMode.Balanced) == true;
-        _turboMode.IsEnabled = _connected && pilot?.CanSwitchTo(PilotMode.Turbo) == true;
-        _customMode.IsEnabled = _connected && pilot?.CanSwitchTo(PilotMode.Custom) == true;
         _restoreMode.IsEnabled = _connected && pilot?.CanRestore == true;
         _keepMode.IsEnabled = _connected && pilot?.CanKeep == true;
         RenderFanControls();
@@ -636,21 +633,24 @@ public sealed partial class MainWindow : Window
         var sample = Sample("Customize/SupportInfo"); _capAge.Text = $"{Age(sample)} · BIOS 项目 {sample?.Text("BIOS_PROJECT_ID") ?? "—"} · 项目号 {sample?.Text("ProjectID") ?? "—"}";
         var differences = AuditReview.Capabilities(sample);
         _capReview.Text = differences.Count == 0 ? "能力响应中的机型身份与监控就绪条件匹配。每项功能仍按独立能力位开放，控制还需关键配置与供电匹配。" : FormatDifferences(differences);
-        var key = (sample?.Payload.GetRawText() ?? "none") + sample?.Freshness(TimeProvider.System, _connected);
+        var pilot = _observer?.Pilot;
+        var key = (sample?.Payload.GetRawText() ?? "none") + sample?.Freshness(TimeProvider.System, _connected)
+            + _connected + pilot?.CanSwitch + pilot?.CanControlFan + pilot?.ControlStatus + pilot?.FanControlStatus;
         if (_capabilityKey == key) return;
         _capabilityKey = key; _capabilities.Children.Clear();
         var other = new StackPanel { Spacing = 12 };
         foreach (var capability in DeviceAudit.Capabilities(sample, _connected))
         {
             var implemented = capability.Field is "SystemMonitorSupport" or "FanSettingsSupport" or "TurboModeSupport" or "FanBoostBtnSupport";
-            var current = sample?.Freshness(TimeProvider.System, _connected) == SampleFreshness.Current;
-            var availability = !current ? (_connected ? "等待更新" : "上次报告") :
-                !implemented ? "尚未开放" : capability.DeclaredSupported is null ? "待确认" : capability.DeclaredSupported == false ? "未报告支持" :
-                capability.Field == "SystemMonitorSupport" ? "可监测" : capability.Field == "FanBoostBtnSupport" ? "可控制" : "模式已开放";
+            var ready = capability.Field == "SystemMonitorSupport" ? _connected : capability.Field == "FanBoostBtnSupport" ? pilot?.CanControlFan == true : pilot?.CanSwitch == true;
+            var blocked = capability.Field == "FanBoostBtnSupport" ? pilot?.FanControlStatus : pilot?.ControlStatus;
+            var availability = UiPresentation.Capability(implemented, capability.DeclaredSupported, sample?.Freshness(TimeProvider.System, _connected),
+                _connected, ready, FriendlyControlReason(blocked ?? "等待设备状态"));
             var content = new StackPanel { Spacing = 6 };
-            content.Children.Add(Text($"{capability.Name} · {availability}", 16, true));
+            content.Children.Add(Text($"{capability.Name} · {availability.State}", 16, true));
             content.Children.Add(Secondary(FeatureDescription(capability.Field)));
-            ToolTipService.SetToolTip(content, $"原厂字段：{capability.Field} = {sample?.Text(capability.Field) ?? "未知"}\n{capability.Detail}");
+            if (availability.Reason.Length != 0) content.Children.Add(Secondary(availability.Reason));
+            ToolTipService.SetToolTip(content, $"原厂声明：{capability.Field} = {sample?.Text(capability.Field) ?? "未知"}\n{capability.Detail}");
             if (implemented) _capabilities.Children.Add(Card(content)); else other.Children.Add(content);
         }
         _capabilities.Children.Add(Details("尚未开放的功能", other));
@@ -695,7 +695,9 @@ public sealed partial class MainWindow : Window
             sessionHealth = _observer?.Health.Snapshot(_connected), previousSessions = _previousSessions.ToArray(),
             powerNotificationsAvailable = _powerNotificationsAvailable,
             appearance = new { _preferences.GlowEnabled, _preferences.GlowDisplay, _preferences.GlowPalette, _preferences.GlowMotion,
-                animationsRunning = _glowRunning, glowVisuals = _metricGlows.Count, systemAnimations = _uiSettings.AnimationsEnabled },
+                animationsRunning = _glowRunning, glowVisuals = _metricGlows.Count, systemAnimations = _uiSettings.AnimationsEnabled,
+                windowWidth = AppWindow.Size.Width, windowHeight = AppWindow.Size.Height,
+                rasterizationScale = _root.XamlRoot?.RasterizationScale, textScale = _uiSettings.TextScaleFactor, metricColumns = _metrics.ColumnDefinitions.Count },
             topicHealth = ReadProtocol.Topics.Select(topic => new { topic, received = _samples.ContainsKey(topic),
                 freshness = Sample(topic)?.Freshness(TimeProvider.System, _connected).ToString() ?? "Missing",
                 ageSeconds = Sample(topic)?.Age().TotalSeconds }).ToArray(),

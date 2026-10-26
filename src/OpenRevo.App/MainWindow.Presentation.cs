@@ -1,4 +1,4 @@
-using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
@@ -8,10 +8,16 @@ namespace OpenRevo.App;
 
 public sealed partial class MainWindow
 {
+    private string _modeFeedbackKey = "";
     private readonly ProgressRing _connectionProgress = new() { Width = 18, Height = 18 };
     private readonly Grid _modeChoices = new() { ColumnSpacing = 12, RowSpacing = 12 };
     private readonly Dictionary<PilotMode, TextBlock> _choiceTitles = [];
-    private readonly TextBlock _currentModeTitle = Text("等待模式数据", 28, true);
+    private readonly TextBlock _currentModeTitle = new() { Text = "等待模式数据", FontSize = UiStyle.ModeReading, FontWeight = Microsoft.UI.Text.FontWeights.Bold, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _currentModeLabel = Secondary("当前模式");
+    private readonly Dictionary<PilotMode, TextBlock> _choiceDescriptions = [];
+    private readonly Dictionary<PilotMode, FontIcon> _choiceChecks = [];
+    private readonly Dictionary<PilotMode, Border> _choiceFrames = [];
+    private readonly Dictionary<PilotMode, TextBlock> _choiceStates = [];
     private readonly TextBlock _currentModeDetail = Secondary("连接后显示当前模式和供电状态");
     private readonly StackPanel _modeCompletion = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
     private readonly InfoBar _modeFeedback = new() { IsOpen = true, IsClosable = false, Severity = InfoBarSeverity.Informational };
@@ -33,7 +39,7 @@ public sealed partial class MainWindow
 
     private FrameworkElement ConnectionChrome()
     {
-        var container = new StackPanel { Spacing = 8, Margin = new Thickness(24, 0, 24, 8) };
+        var container = new StackPanel { Spacing = 8, Margin = new Thickness(24, 0, 24, 4) };
         var bar = new Grid { ColumnSpacing = 16, RowSpacing = 8 };
         bar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         bar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -41,7 +47,8 @@ public sealed partial class MainWindow
         bar.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         var status = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, VerticalAlignment = VerticalAlignment.Center };
         status.Children.Add(_connectionProgress);
-        var labels = new StackPanel { Spacing = 2 }; labels.Children.Add(_connection); labels.Children.Add(_device);
+        var labels = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 }; labels.Children.Add(_connection);
+        _device.Style = (Style)Application.Current.Resources["SecondaryBodyStyle"]; labels.Children.Add(_device);
         status.Children.Add(labels); bar.Children.Add(status);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
         _export.Click += async (_, _) => await ExportAsync();
@@ -53,7 +60,8 @@ public sealed partial class MainWindow
         Grid.SetColumn(actions, 1); bar.Children.Add(actions);
         bar.SizeChanged += (_, _) =>
         {
-            var compact = bar.ActualWidth < 800;
+            var compact = bar.ActualWidth < 700 * _uiSettings.TextScaleFactor;
+            _device.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
             Grid.SetRow(actions, compact ? 1 : 0); Grid.SetColumn(actions, compact ? 0 : 1);
             Grid.SetColumnSpan(status, compact ? 2 : 1); Grid.SetColumnSpan(actions, compact ? 2 : 1);
         };
@@ -75,15 +83,25 @@ public sealed partial class MainWindow
         };
         foreach (var (button, mode, title, description) in choices)
         {
-            var content = new StackPanel { Spacing = 4 };
-            var label = Text(title, 15, true); _choiceTitles[mode] = label;
-            content.Children.Add(label); content.Children.Add(Secondary(description));
+            var content = new StackPanel { Spacing = 5 };
+            var header = new Grid { ColumnSpacing = 8 };
+            header.ColumnDefinitions.Add(new ColumnDefinition());
+            header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            var label = Text(title, 15, true); _choiceTitles[mode] = label; header.Children.Add(label);
+            var status = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
+            var check = LucideIcons.Icon("circle-check", 14); _choiceChecks[mode] = check;
+            var state = Text("", 12, true); _choiceStates[mode] = state;
+            status.Children.Add(check); status.Children.Add(state); Grid.SetColumn(status, 1); header.Children.Add(status);
+            content.Children.Add(header);
+            var descriptionText = Secondary(description); descriptionText.FontSize = 13; _choiceDescriptions[mode] = descriptionText;
+            content.Children.Add(descriptionText);
             button.Content = content; button.HorizontalAlignment = HorizontalAlignment.Stretch;
-            button.HorizontalContentAlignment = HorizontalAlignment.Left; button.MinHeight = 80;
-            button.Padding = new Thickness(16, 12, 16, 12);
+            button.HorizontalContentAlignment = HorizontalAlignment.Stretch; button.MinHeight = 80;
+            button.CornerRadius = new CornerRadius(12); button.Padding = new Thickness(14, 12, 14, 12);
             AutomationProperties.SetName(button, "切换到" + title);
             AutomationProperties.SetHelpText(button, description);
-            _modeChoices.Children.Add(button);
+            var frame = new Border { Child = button }; _choiceFrames[mode] = frame;
+            _modeChoices.Children.Add(frame);
         }
         _modeChoices.SizeChanged += (_, _) =>
         {
@@ -92,13 +110,13 @@ public sealed partial class MainWindow
             _modeChoices.ColumnDefinitions.Clear(); _modeChoices.RowDefinitions.Clear();
             for (var i = 0; i < columns; i++) _modeChoices.ColumnDefinitions.Add(new ColumnDefinition());
             for (var i = 0; i < 4 / columns; i++) _modeChoices.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            for (var i = 0; i < 4; i++) { var button = (FrameworkElement)_modeChoices.Children[i]; Grid.SetColumn(button, i % columns); Grid.SetRow(button, i / columns); }
+            for (var i = 0; i < 4; i++) { var frame = (FrameworkElement)_modeChoices.Children[i]; Grid.SetColumn(frame, i % columns); Grid.SetRow(frame, i / columns); }
         };
     }
 
     private void LayoutPages()
     {
-        var top = _navigation.DisplayMode == NavigationViewDisplayMode.Minimal ? 56 : 20;
+        var top = _navigation.DisplayMode == NavigationViewDisplayMode.Minimal ? 48 : 12;
         foreach (var page in _pages.Values)
         {
             var content = page is ScrollViewer scroll ? scroll.Content as FrameworkElement : page as FrameworkElement;
@@ -108,7 +126,7 @@ public sealed partial class MainWindow
 
     private void RenderPresentation()
     {
-        LayoutPages();
+        LayoutPages(); if (_page == "overview") LayoutMetrics();
         var running = _sessionActive;
         var phase = _observer?.Phase ?? MonitorPhase.Idle;
         _connectionProgress.IsActive = running && (_stopping || phase != MonitorPhase.Monitoring);
@@ -129,18 +147,20 @@ public sealed partial class MainWindow
         _currentModeTitle.Text = mode is null ? "等待模式数据" : pilot?.CurrentMode is null ? "暂时无法识别" : modeName;
         _currentModeDetail.Text = mode is null ? "连接后会自动读取当前模式" :
             (mode.Text("IsAC") is "True" or "true" ? "已接通电源" : "使用电池或等待供电确认") + " · " + Age(mode);
-        foreach (var choice in _choiceTitles)
-        {
-            var current = pilot?.CurrentMode == ((int)choice.Key).ToString();
-            choice.Value.Text = DeviceAudit.ModeName(((int)choice.Key).ToString()) + (current ? " · 当前" : "");
-        }
-        foreach (var (button, choice) in new[] { (_officeMode, PilotMode.Office), (_balancedMode, PilotMode.Balanced), (_turboMode, PilotMode.Turbo), (_customMode, PilotMode.Custom) })
-            AutomationProperties.SetName(button, (pilot?.CurrentMode == ((int)choice).ToString() ? "当前模式：" : "切换到") + DeviceAudit.ModeName(((int)choice).ToString()));
+        _currentModeLabel.Text = _connected && mode?.Freshness(TimeProvider.System, true) == SampleFreshness.Current ? "当前模式" : "上次报告的模式";
+        RenderModeChoices(pilot);
         var busy = pilot?.Busy == true && !pilot.FanBusy;
         _modeProgress.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
         _modeCompletion.Visibility = journal?.Baseline is not null && journal.Phase is
             PilotPhase.Applied or PilotPhase.Sending or PilotPhase.AwaitingReadback or PilotPhase.Restoring or PilotPhase.Uncertain or PilotPhase.Interrupted
             ? Visibility.Visible : Visibility.Collapsed;
+        var feedbackKey = $"{journal?.Id}:{journal?.Phase}:{busy}:{_connected && pilot?.CanSwitch == true}:{_lastModeResult?.Detail}";
+        if (_modeFeedbackKey != feedbackKey)
+        {
+            _modeFeedbackKey = feedbackKey;
+            _modeFeedback.IsOpen = UiPresentation.ShowModeFeedback(busy, journal?.Phase ?? PilotPhase.Idle, _lastModeResult is { Succeeded: false }, _connected && pilot?.CanSwitch == true);
+        }
+        _modeFeedback.IsClosable = !busy && journal?.Phase is PilotPhase.Applied or PilotPhase.Restored;
         _modeFeedback.Severity = InfoBarSeverity.Informational;
         if (busy) { _modeFeedback.Title = "正在核对切换结果"; _modeFeedback.Message = "请稍候，完成后会显示结果。"; }
         else if (journal?.Phase is PilotPhase.Uncertain or PilotPhase.Interrupted)
@@ -162,8 +182,8 @@ public sealed partial class MainWindow
         {
             _modeFeedback.Severity = InfoBarSeverity.Success;
             _modeFeedback.Title = journal.Phase switch
-            { PilotPhase.Applied => "已切换到" + modeName, PilotPhase.Restored => "已撤销上次切换", _ => "已保留" + modeName };
-            _modeFeedback.Message = journal.Phase == PilotPhase.Applied ? "可继续选择其他模式，或保留当前模式、撤销上次切换。" : "下次切换会重新记录切换前的配置。";
+            { PilotPhase.Applied => "已生效 · " + modeName, PilotPhase.Restored => "已撤销上次切换", _ => "已结束撤销记录" };
+            _modeFeedback.Message = journal.Phase == PilotPhase.Applied ? UiPresentation.AppliedMessage : "下次切换会重新记录切换前的配置。";
         }
         else
         {
@@ -208,8 +228,8 @@ public sealed partial class MainWindow
     {
         "SystemMonitorSupport" => "查看处理器、显卡、风扇和电池状态。",
         "FanSettingsSupport" => "切换四种性能模式；自定义使用原厂已保存的配置。风扇曲线暂不支持编辑。",
-        "TurboModeSupport" => "在性能模式中选择狂暴模式，需接通电源且当前配置已验证。",
-        "FanBoostBtnSupport" => "在性能模式页开启一键强冷，或恢复原厂自动调速，查看两路风扇转速。",
+        "TurboModeSupport" => "在性能与散热页选择狂暴模式，需接通电源且当前配置已验证。",
+        "FanBoostBtnSupport" => "在性能与散热页开启一键强冷或恢复自动调速。",
         "ColorCalibrationSupport" => "暂不支持修改显示色彩。", "DGpuDirectConnectionSupport" => "暂不支持切换显卡连接方式。",
         "OcSettingsSupport" => "暂不支持修改功耗或超频参数。", "RGBLightbarSupport" => "暂不支持修改灯带效果。",
         "LiquidCoolingSupport" => "暂不支持液冷控制。", "TypeCSupport" => "暂不支持修改 Type-C 供电策略。",

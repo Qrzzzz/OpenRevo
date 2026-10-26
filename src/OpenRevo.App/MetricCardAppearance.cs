@@ -22,18 +22,18 @@ internal readonly record struct MetricDetail(string Label, string Value);
 
 // Each card receives the same hue as its background field. Only the primary
 // reading uses this ink; labels, units and supporting information stay neutral.
-internal readonly record struct MetricCardTheme(GlowRgb Accent, bool Light, bool Enabled)
+internal readonly record struct MetricCardTheme(GlowRgb Accent, bool Light, bool Enabled, bool Status = false)
 {
     internal GlowRgb? PrimaryInk(bool available, SampleFreshness? freshness) =>
-        Enabled && available && freshness == SampleFreshness.Current ? ReadableInk(Accent, Light) : null;
+        Enabled && available && freshness == SampleFreshness.Current ? ReadableInk(Accent, Light, !Status) : null;
 
-    internal static GlowRgb ReadableInk(GlowRgb accent, bool light)
+    internal static GlowRgb ReadableInk(GlowRgb accent, bool light, bool restrained = true)
     {
         var background = GlowRgb.Hex(light ? 0xFBFBFEu : 0x25272Eu);
         var target = GlowRgb.Hex(light ? 0x181818u : 0xF7F7F7u);
         // Weight and luminance carry the hierarchy. Preserve only a quiet hue
         // in the primary reading instead of six competing pastel headlines.
-        accent = accent.Mix(target, light ? .82 : .76);
+        if (restrained) accent = accent.Mix(target, light ? .82 : .76);
         for (var step = 0; step <= 100; step++)
         {
             var ink = accent.Mix(target, step / 100d);
@@ -55,7 +55,7 @@ internal readonly record struct MetricCardTheme(GlowRgb Accent, bool Light, bool
     }
 
     internal static (string Status, string Age) Timestamp(SampleFreshness? freshness, TimeSpan age) => (
-        freshness switch { SampleFreshness.Current => "实时", SampleFreshness.Cached => "缓存", SampleFreshness.Stale => "未更新",
+        freshness switch { SampleFreshness.Current => "实时", SampleFreshness.Cached => "缓存", SampleFreshness.Stale => "较旧",
             SampleFreshness.Disconnected => "历史", _ => "等待数据" },
         freshness is null ? "尚未收到" : age.TotalSeconds < 60 ? $"{Math.Max(0, age.TotalSeconds):0} 秒前" : $"{age.TotalMinutes:0} 分钟前");
 }

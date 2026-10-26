@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Media;
 using OpenRevo.Core;
@@ -18,6 +19,7 @@ public sealed partial class MainWindow
     private readonly Grid _metricStage = new();
     private readonly Grid _metricGlowHost = new() { IsHitTestVisible = false };
     private readonly TextBlock _glowCaption = Secondary("");
+    private Button? _glowButton;
     private readonly List<MetricGlow> _metricGlows = [];
     private ContainerVisual? _glowContainer;
     private bool _glowRunning;
@@ -35,63 +37,79 @@ public sealed partial class MainWindow
         internal GlowRgb? Color;
     }
 
-    private UIElement GlowToolbar()
+    private FrameworkElement GlowToolbar()
     {
-        var bar = new Grid { ColumnSpacing = 12 };
-        bar.ColumnDefinitions.Add(new ColumnDefinition());
-        bar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        _glowCaption.VerticalAlignment = VerticalAlignment.Center;
-        bar.Children.Add(_glowCaption);
-        var open = new Button { Content = "卡片光效", HorizontalAlignment = HorizontalAlignment.Right };
-        AutomationProperties.SetHelpText(open, "选择预设配色或状态显示，并设置动态流光。");
-        Grid.SetColumn(open, 1); bar.Children.Add(open);
-        var panel = new StackPanel { Spacing = 14, Width = 320 };
-        panel.Children.Add(Text("卡片光效", 18, true));
-        var enabled = new ToggleSwitch { Header = "柔和光晕", IsOn = _preferences.GlowEnabled, OnContent = "开启", OffContent = "关闭" };
-        panel.Children.Add(enabled);
-        var display = new ComboBox { Header = "显示方式", HorizontalAlignment = HorizontalAlignment.Stretch };
-        display.Items.Add(new ComboBoxItem { Content = "预设配色" });
-        display.Items.Add(new ComboBoxItem { Content = "状态显示" });
-        display.Items.Add(new ComboBoxItem { Content = "自定义方案 · 后续版本", IsEnabled = false });
-        display.SelectedIndex = (int)_preferences.GlowDisplay;
-        LucideIcons.Combo(display); panel.Children.Add(display);
-        var preset = new ComboBox { Header = "配色方案", HorizontalAlignment = HorizontalAlignment.Stretch };
-        foreach (var palette in Enum.GetValues<GlowPalette>()) preset.Items.Add(GlowAppearance.Name(palette));
-        preset.SelectedIndex = (int)_preferences.GlowPalette;
-        LucideIcons.Combo(preset); panel.Children.Add(preset);
-        var swatches = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-        AutomationProperties.SetAccessibilityView(swatches, AccessibilityView.Raw);
-        panel.Children.Add(swatches);
-        var description = Secondary(""); panel.Children.Add(description);
-        var motion = new ToggleSwitch { Header = "动态流光", IsOn = _preferences.GlowMotion, OnContent = "开启", OffContent = "关闭" };
-        panel.Children.Add(motion);
-        panel.Children.Add(Secondary("开启动态会增加 GPU 使用和耗电。仅概览处于前台时流动，并跟随系统动画设置。"));
-        panel.Children.Add(Secondary("自定义方案将在后续版本开放。"));
+        var open = new Button { Content = "卡片光效", HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
+        _glowButton = open;
+        AutomationProperties.SetHelpText(open, "预览四组配色或按运行状态着色，设置动态流光。");
+        var panel = new StackPanel { Spacing = 10, Width = 320 };
+        panel.Children.Add(Text("卡片光效", UiStyle.ModuleTitle, true));
+        var enabled = new ToggleSwitch { IsOn = _preferences.GlowEnabled };
+        panel.Children.Add(SettingRow("光晕与水印", "关闭后使用普通卡片", enabled));
+        var display = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 14 };
+        var presetDisplay = new RadioButton { Content = "预设主题", GroupName = "glow-display" };
+        var statusDisplay = new RadioButton { Content = "运行状态", GroupName = "glow-display" };
+        display.Children.Add(presetDisplay); display.Children.Add(statusDisplay); panel.Children.Add(display);
+        var previews = new Grid { ColumnSpacing = 8, RowSpacing = 8 };
+        previews.ColumnDefinitions.Add(new ColumnDefinition()); previews.ColumnDefinitions.Add(new ColumnDefinition());
+        previews.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); previews.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        var choices = new List<(GlowPalette Palette, ToggleButton Button)>();
+        foreach (var palette in Enum.GetValues<GlowPalette>())
+        {
+            var content = new StackPanel { Spacing = 7 };
+            content.Children.Add(Text(GlowAppearance.Name(palette), 13, true));
+            var swatches = new Grid { Height = 9, ColumnSpacing = 2 };
+            var colors = GlowAppearance.Colors(palette);
+            for (var i = 0; i < colors.Length; i++)
+            {
+                swatches.ColumnDefinitions.Add(new ColumnDefinition());
+                var swatch = new Border { CornerRadius = new CornerRadius(3), Background = new SolidColorBrush(GlowColor(colors[i])) };
+                AutomationProperties.SetAccessibilityView(swatch, AccessibilityView.Raw);
+                Grid.SetColumn(swatch, i); swatches.Children.Add(swatch);
+            }
+            content.Children.Add(swatches);
+            var choice = new ToggleButton { Content = content, Padding = new Thickness(10), HorizontalAlignment = HorizontalAlignment.Stretch,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch, MinHeight = 62 };
+            AutomationProperties.SetName(choice, GlowAppearance.Name(palette));
+            Grid.SetColumn(choice, (int)palette % 2); Grid.SetRow(choice, (int)palette / 2); previews.Children.Add(choice);
+            choices.Add((palette, choice));
+        }
+        panel.Children.Add(previews);
+        var description = Secondary("CPU／GPU 按占用率，风扇按输出，电池按电量。蓝 → 紫 → 珊瑚红；颜色不表示温度告警。");
+        panel.Children.Add(description);
+        panel.Children.Add(new Button { Content = "自定义方案 · 后续版本", IsEnabled = false, HorizontalAlignment = HorizontalAlignment.Stretch });
+        var motion = new ToggleSwitch { IsOn = _preferences.GlowMotion };
+        panel.Children.Add(SettingRow("动态流光", "增加 GPU 使用与耗电，仅概览前台运行。", motion));
+        var selected = _preferences.GlowPalette;
+        var updating = false;
         void UpdateChoices()
         {
+            updating = true;
             var status = _preferences.GlowDisplay == GlowDisplay.Status;
-            display.IsEnabled = enabled.IsOn;
-            preset.IsEnabled = enabled.IsOn;
-            preset.Visibility = swatches.Visibility = status ? Visibility.Collapsed : Visibility.Visible;
-            motion.IsEnabled = enabled.IsOn;
-            description.Text = status
-                ? "蓝色为常态，紫色过渡至珊瑚红：CPU／GPU 按占用，风扇按输出，电池按低电量显示。当前模式有效时为蓝色；过期、缺失或断开后为灰色。颜色仅辅助查看，不代表故障报警。"
-                : "整组卡片共用一片柔和色雾，不同色彩在背景中自然融合。卡片保留轻微染色，仅主读数使用呼应的主题色。";
-            swatches.Children.Clear();
-            foreach (var color in GlowAppearance.Colors(_preferences.GlowPalette))
-                swatches.Children.Add(new Border { Width = 42, Height = 6, CornerRadius = new CornerRadius(3), Background = new SolidColorBrush(GlowColor(color)) });
+            presetDisplay.IsChecked = !status; statusDisplay.IsChecked = status;
+            presetDisplay.IsEnabled = statusDisplay.IsEnabled = enabled.IsOn; motion.IsEnabled = enabled.IsOn;
+            previews.Visibility = status ? Visibility.Collapsed : Visibility.Visible;
+            description.Visibility = status ? Visibility.Visible : Visibility.Collapsed;
+            foreach (var (palette, button) in choices) { button.IsEnabled = enabled.IsOn; button.IsChecked = palette == selected; }
+            updating = false;
         }
         void Changed()
         {
-            _preferences = _preferences with { GlowEnabled = enabled.IsOn, GlowDisplay = display.SelectedIndex == 1 ? GlowDisplay.Status : GlowDisplay.Preset,
-                GlowPalette = (GlowPalette)Math.Max(0, preset.SelectedIndex), GlowMotion = motion.IsOn };
+            if (updating) return;
+            _preferences = _preferences with { GlowEnabled = enabled.IsOn,
+                GlowDisplay = statusDisplay.IsChecked == true ? GlowDisplay.Status : GlowDisplay.Preset,
+                GlowPalette = selected, GlowMotion = motion.IsOn };
             UpdateChoices(); SavePreferences(); RenderMetricGlows();
         }
-        enabled.Toggled += (_, _) => Changed(); display.SelectionChanged += (_, _) => Changed();
-        preset.SelectionChanged += (_, _) => Changed(); motion.Toggled += (_, _) => Changed();
+        foreach (var (palette, button) in choices) button.Click += (_, _) => { selected = palette; Changed(); };
+        enabled.Toggled += (_, _) => Changed(); presetDisplay.Checked += (_, _) => Changed();
+        statusDisplay.Checked += (_, _) => Changed(); motion.Toggled += (_, _) => Changed();
         UpdateChoices();
-        open.Flyout = new Flyout { Content = new ScrollViewer { Content = panel, MaxHeight = 590, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled } };
-        return bar;
+        var scroll = new ScrollViewer { Content = panel, MaxHeight = 500, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
+        var flyout = new Flyout { Content = scroll, Placement = FlyoutPlacementMode.BottomEdgeAlignedRight, ShouldConstrainToRootBounds = true };
+        flyout.Opening += (_, _) => scroll.MaxHeight = Math.Clamp(_root.ActualHeight - 80, 220, 500);
+        open.Flyout = flyout;
+        return open;
     }
 
     private void InitializeMetricGlows()
@@ -159,6 +177,7 @@ public sealed partial class MainWindow
         _glowCaption.Text = highContrast ? "系统对比度主题 · 光效已暂停" : !enabled ? "卡片光效已关闭" :
             (_preferences.GlowDisplay == GlowDisplay.Status ? "状态配色 · 蓝 → 紫 → 珊瑚红" : GlowAppearance.Name(_preferences.GlowPalette))
                 + (_preferences.GlowMotion ? animate ? " · 动态流光" : " · 动态已暂停" : " · 静态光晕");
+        if (_glowButton is not null) ToolTipService.SetToolTip(_glowButton, _glowCaption.Text);
         var light = _root.ActualTheme == ElementTheme.Light;
         var colors = _preferences.GlowDisplay == GlowDisplay.Status ? StatusGlowColors() : GlowAppearance.Colors(_preferences.GlowPalette);
         // Apply independently of glow caching: a fresh value can become stale
@@ -166,7 +185,7 @@ public sealed partial class MainWindow
         var cardKeys = new[] { "cpu", "gpu", "battery", "cpuFan", "gpuFan", "mode" };
         for (var i = 0; i < cardKeys.Length; i++)
             if (_metricViews.TryGetValue(cardKeys[i], out var cardView))
-                cardView.ApplyTheme(new MetricCardTheme(colors[i], light, enabled && colors[i] != GlowAppearance.Muted), enabled);
+                cardView.ApplyTheme(new MetricCardTheme(colors[i], light, enabled && colors[i] != GlowAppearance.Muted, _preferences.GlowDisplay == GlowDisplay.Status), enabled);
         if (_glowContainer is null) return;
         _glowContainer.IsVisible = enabled && _page == "overview";
         if (!enabled)

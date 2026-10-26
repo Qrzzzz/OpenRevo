@@ -17,7 +17,7 @@ inline HMENU CreateTrayMenu(bool hasUi, DWORD state)
     const auto menu = CreatePopupMenu();
     if (!menu) return nullptr;
     AppendMenuW(menu, MF_STRING, OpenCommand, L"打开设备概览(&O)");
-    AppendMenuW(menu, MF_STRING, PerformanceCommand, L"性能与风扇(&P)");
+    AppendMenuW(menu, MF_STRING, PerformanceCommand, L"性能与散热(&P)");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(menu, MF_STRING | MF_DISABLED, 0,
         hasUi ? L"快捷控制 · 按实时状态启用" : L"快捷控制 · 打开后核验并执行");
@@ -47,7 +47,7 @@ inline HMENU CreateTrayMenu(bool hasUi, DWORD state)
     AppendMenuW(menu, MF_STRING | MF_POPUP, reinterpret_cast<UINT_PTR>(modes), L"性能模式(&M)");
     AppendMenuW(menu, MF_STRING | MF_POPUP, reinterpret_cast<UINT_PTR>(fans), L"风扇调速(&F)");
     add(menu, RestoreCommand, L"撤销上次模式切换(&U)");
-    add(menu, KeepCommand, L"保留当前模式(&K)");
+    add(menu, KeepCommand, L"结束撤销记录(&K)");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(menu, MF_STRING, DiagnosticsCommand, L"保存诊断报告(&D)");
     AppendMenuW(menu, MF_STRING, UpdatesCommand, L"检查 GitHub 更新(&G)");

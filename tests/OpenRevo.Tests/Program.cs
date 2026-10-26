@@ -1246,8 +1246,66 @@ Test("compact metric timestamps distinguish history, stale and retained cache", 
     Check(MetricCardTheme.Timestamp(null, TimeSpan.Zero) == ("等待数据", "尚未收到"));
     Check(MetricCardTheme.Timestamp(SampleFreshness.Current, TimeSpan.FromSeconds(-2)) == ("实时", "0 秒前"));
     Check(MetricCardTheme.Timestamp(SampleFreshness.Cached, TimeSpan.FromSeconds(4)).Status == "缓存");
-    Check(MetricCardTheme.Timestamp(SampleFreshness.Stale, TimeSpan.FromMinutes(2)) == ("未更新", "2 分钟前"));
+    Check(MetricCardTheme.Timestamp(SampleFreshness.Stale, TimeSpan.FromMinutes(2)) == ("较旧", "2 分钟前"));
     Check(MetricCardTheme.Timestamp(SampleFreshness.Disconnected, TimeSpan.FromSeconds(10)).Status == "历史");
+});
+
+Test("metric display distinguishes stale cache history invalid values and valid zero without claiming freshness", () =>
+{
+    Check(UiPresentation.MetricTime(null, TimeSpan.Zero, false) == "等待设备数据");
+    Check(UiPresentation.MetricTime(SampleFreshness.Current, TimeSpan.FromSeconds(1), true) == "更新于 1 秒前");
+    Check(UiPresentation.MetricTime(SampleFreshness.Stale, TimeSpan.FromSeconds(30), true) == "上次更新 30 秒前 · 较旧");
+    Check(UiPresentation.MetricTime(SampleFreshness.Cached, TimeSpan.FromSeconds(3), true).StartsWith("缓存数据"));
+    Check(UiPresentation.MetricTime(SampleFreshness.Disconnected, TimeSpan.FromSeconds(3), true).StartsWith("历史数据"));
+    Check(UiPresentation.MetricTime(SampleFreshness.Current, TimeSpan.FromSeconds(1), false).StartsWith("暂无有效读数"));
+    Check(MetricReading.Numeric(0, "%", 0, 100).Available);
+});
+Test("current choice is focusable only when existing control readiness holds", () =>
+{
+    Check(UiPresentation.ChoiceEnabled(true, false, true, true, false));
+    Check(UiPresentation.ChoiceEnabled(true, false, false, true, true));
+    Check(!UiPresentation.ChoiceEnabled(true, false, false, true, false));
+    Check(!UiPresentation.ChoiceEnabled(false, false, true, true, false));
+    Check(!UiPresentation.ChoiceEnabled(true, true, true, true, true));
+    Check(!UiPresentation.ChoiceEnabled(true, false, true, false, false));
+});
+Test("idle mode guidance is quiet while progress errors and confirmed results remain visible", () =>
+{
+    Check(!UiPresentation.ShowModeFeedback(false, PilotPhase.Idle, false, true));
+    Check(!UiPresentation.ShowModeFeedback(false, PilotPhase.Kept, false, true));
+    Check(UiPresentation.ShowModeFeedback(true, PilotPhase.Sending, false, true));
+    foreach (var phase in new[] { PilotPhase.Applied, PilotPhase.Restored, PilotPhase.Uncertain, PilotPhase.Interrupted })
+        Check(UiPresentation.ShowModeFeedback(false, phase, false, true));
+    Check(UiPresentation.ShowModeFeedback(false, PilotPhase.Idle, true, true));
+    Check(UiPresentation.ShowModeFeedback(false, PilotPhase.Idle, false, false));
+    Check(UiPresentation.AppliedMessage.Contains("已生效") && UiPresentation.AppliedMessage.Contains("无需保存"));
+});
+Test("capability wording separates app availability declaration freshness and current readiness", () =>
+{
+    Check(UiPresentation.Capability(false, true, SampleFreshness.Current, true, true, "").State == "尚未提供");
+    Check(UiPresentation.Capability(true, true, SampleFreshness.Current, false, true, "").Reason == "设备未连接");
+    Check(UiPresentation.Capability(true, null, null, true, false, "").State == "等待数据");
+    foreach (var declared in new bool?[] { null, false })
+        Check(UiPresentation.Capability(true, declared, SampleFreshness.Current, true, true, "").Reason == "原厂未声明支持");
+    Check(UiPresentation.Capability(true, true, SampleFreshness.Stale, true, true, "").State == "暂不可用");
+    Check(UiPresentation.Capability(true, true, SampleFreshness.Current, true, false, "请接通电源").Reason == "请接通电源");
+    Check(UiPresentation.Capability(true, true, SampleFreshness.Current, true, true, "").State == "可用");
+});
+Test("metric columns leave room for long readings as text scales up", () =>
+{
+    Check(UiPresentation.MetricColumns(1000, 1) == 3 && UiPresentation.MetricColumns(700, 1) == 2);
+    Check(UiPresentation.MetricColumns(1000, 2) == 2 && UiPresentation.MetricColumns(700, 2) == 1);
+    Check(MetricReading.Numeric(20000, "RPM", 0, 20000, true).Value == "20,000");
+    Check(MetricReading.Mode("3").Value == "自定义");
+});
+Test("status inks can emphasize the actual percentage while preset inks stay restrained", () =>
+{
+    var preset = new MetricCardTheme(GlowAppearance.Coral, false, true);
+    var status = preset with { Status = true };
+    Check(preset.PrimaryInk(true, SampleFreshness.Current) != status.PrimaryInk(true, SampleFreshness.Current));
+    foreach (var freshness in new[] { SampleFreshness.Stale, SampleFreshness.Cached, SampleFreshness.Disconnected })
+        Check(status.PrimaryInk(true, freshness) is null);
+    Check(MetricCardTheme.Contrast(status.PrimaryInk(true, SampleFreshness.Current)!.Value, GlowRgb.Hex(0x25272E)) >= 5.5);
 });
 
 var failures = new List<string>();
